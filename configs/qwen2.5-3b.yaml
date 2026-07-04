@@ -1,0 +1,17 @@
+# DenseSteer reproduction config for Qwen2.5-3B-Instruct on GSM8K.
+model_name: Qwen/Qwen2.5-3B-Instruct
+device: cuda:0
+
+# Dense-Rewriting
+rewriter_model: gpt-4o        # OpenAI model used to densify traces
+n_calibration: 50             # contrastive pairs (paper: 25-50 effective)
+
+# Evaluation
+n_eval: 200                   # held-out GSM8K test problems
+max_new_tokens: 512
+
+# Steering sweep (04_evaluate.py)
+# Qwen2.5-3B has 36 layers; paper reports middle layers best.
+sweep_layers: [14, 16, 18, 20]
+sweep_coeffs: [2, 4, 6, 8, 10]
+normalize_vector: false
