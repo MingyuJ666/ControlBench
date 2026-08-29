@@ -148,7 +148,12 @@ def _check_resumable(search: dict, model: str, method: str, limit,
             "measurement, so pass --force to redo it"
         )
     plan = search["plan"]
-    axes = plan["axes"]
+    # Axes are read off the declared stages rather than from a field of their
+    # own: the plan is stored exactly as SearchPlan.as_record() produces it,
+    # and that record carries axes only inside its stage configurations.
+    axes = list(dict.fromkeys(
+        axis for stage in plan["stages"] for axis in stage["configs"][0]
+    ))
     unknown = [axis for axis in grid if axis not in axes]
     if unknown:
         raise SystemExit(
