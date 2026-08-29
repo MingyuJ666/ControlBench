@@ -1,0 +1,15 @@
+# Run outputs live outside the repo; `data` is the default output root, or a
+# symlink to a data disk (see src/kernel/config.py). The default HF cache
+# lands beside it.
+data
+hf_cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Working notes stay local: the design record, the data provenance, the ReFT
+# specification and the restructure proposal are for us, not for the release.
+DATA.md
+DESIGN.md
+REFT_SPEC.md
+RESTRUCTURE.md
