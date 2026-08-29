@@ -77,6 +77,22 @@ def test_qwen3_real_hidden_state_extraction_smoke(tmp_path, monkeypatch):
     )
 
 
+def _caa_intervention(model, vector, layer, alpha, positions="all"):
+    """The context CAA installs, reached through its public interface.
+
+    The smoke checks the arithmetic of the addition, so it asks for every
+    position; which positions the benchmark steers is decided in
+    baselines.shared.positions and tested there."""
+    from baselines.shared.residual_add import add_direction
+
+    caa.make_intervention(
+        model, {"vector": vector}, {"layer": layer, "alpha": alpha}
+    )
+    return add_direction(
+        model, alpha * vector[layer], layer, positions=positions
+    )
+
+
 @pytest.mark.skipif(
     os.environ.get("RUN_MODEL_SMOKE") != "1",
     reason="set RUN_MODEL_SMOKE=1 to load Qwen3-8B",
