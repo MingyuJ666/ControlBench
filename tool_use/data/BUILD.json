@@ -1,0 +1,29 @@
+{
+  "tasks": {
+    "call": {
+      "unfiltered": 1295,
+      "audited": 1226,
+      "with_followup": 0
+    },
+    "clarify": {
+      "unfiltered": 1062,
+      "audited": 873,
+      "with_followup": 873
+    },
+    "abstain": {
+      "unfiltered": 1295,
+      "audited": 1010,
+      "with_followup": 1010
+    }
+  },
+  "pairs": {
+    "unfiltered": 3865,
+    "audited": 3378,
+    "contexts": {
+      "should_call": 1680,
+      "should_clarify": 849,
+      "should_abstain": 849
+    }
+  },
+  "code_commit": "ecbed9f"
+}

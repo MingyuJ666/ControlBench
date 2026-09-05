@@ -1,0 +1,26 @@
+[project]
+name = "tool-use-steering"
+version = "0.1.0"
+description = "A benchmark for steering when a language model calls a tool, asks for a missing parameter, or abstains."
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.1",
+    "transformers>=4.51",
+    "huggingface_hub>=0.23",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+# The multi-turn track's executable backends and checker. Pinned to the same
+# date as the data snapshot in raw/bfcl_multi_turn/.
+bfcl = ["bfcl-eval==2026.3.23"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["tool_use_steering*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

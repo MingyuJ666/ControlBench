@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "note": "Directly-read benchmark inputs for the tool-use domain. Pre-split snapshots and the build pipeline are not shipped; provenance is this manifest plus BUILD.json.",
+  "source_code_commit": "ecbed9f",
+  "counts_from_build": {
+    "tasks": {
+      "call": {
+        "unfiltered": 1295,
+        "audited": 1226,
+        "with_followup": 0
+      },
+      "clarify": {
+        "unfiltered": 1062,
+        "audited": 873,
+        "with_followup": 873
+      },
+      "abstain": {
+        "unfiltered": 1295,
+        "audited": 1010,
+        "with_followup": 1010
+      }
+    },
+    "pairs": {
+      "unfiltered": 3865,
+      "audited": 3378,
+      "contexts": {
+        "should_call": 1680,
+        "should_clarify": 849,
+        "should_abstain": 849
+      }
+    },
+    "code_commit": "ecbed9f"
+  },
+  "files": {
+    "data/items/call.jsonl": {
+      "bytes": 3989349,
+      "sha256": "d568441ab2b9f49a210c3759fbe65b5774ee95e662569c63ba9f2e00dbdf0a95",
+      "rows": 1226
+    },
+    "data/items/clarify.jsonl": {
+      "bytes": 3120709,
+      "sha256": "024513e4ea59f1618e61d951a27bfebeb8c41e617f0d97a3a9f375b0e32e0bc5",
+      "rows": 873
+    },
+    "data/items/abstain.jsonl": {
+      "bytes": 3441622,
+      "sha256": "f68991e6ee71ab7d6381a6e151ce7075f6ed3869bde802dde1ee37f95e13d498",
+      "rows": 1010
+    },
+    "data/splits.json": {
+      "bytes": 188087,
+      "sha256": "b41e1792bd09a1d6a849845abd5adc9a6f60e28140befccdeef6b778b34ea2c0"
+    },
+    "data/mt_splits.json": {
+      "bytes": 2842,
+      "sha256": "19cc4806c0f6a48c26cb7b3e7393a42a5b1d25cb478a44c8158e9a7888eb63e6"
+    },
+    "data/pairs.jsonl": {
+      "bytes": 6218697,
+      "sha256": "4720b28ebbb5b1fc565c7424db3c07d16515fc7ae819bcf83f8e6a0130dfeb00",
+      "rows": 3378
+    },
+    "raw/bfcl_multi_turn/base.json": {
+      "bytes": 390425,
+      "sha256": "1a21a995d06fd6f20ba55de7bced30ef953ec35e998f502ec2ecf4d66ef1c43a"
+    },
+    "raw/bfcl_multi_turn/miss_param.json": {
+      "bytes": 402974,
+      "sha256": "f0c66dda3795f5f53e3e1c0cc8ba0246b6761c8f58bdba8317203bf451ab8838"
+    },
+    "raw/bfcl_multi_turn/miss_func.json": {
+      "bytes": 401159,
+      "sha256": "87d28ce10e37d864b72de85d5732eef2a867b241d6c1c99b4ae682c9e3ea921c"
+    }
+  }
+}

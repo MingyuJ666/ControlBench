@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Produced off-git, kept on a data disk (TOOLSTEER_DATA): steering vectors /
+# probes and per-run records. Regenerate with `extract`, or point the env var.
+artifacts/
+runs/
+
+# Build intermediates: not part of this release (the data pipeline lives in the
+# standalone repo). Only the directly-read inputs under data/ and raw/ ship.
+data/filters/
+data/unfiltered/
+
+# Regression fixtures stay local for now (not part of this release).
+tests/
+
+.DS_Store
+*.log

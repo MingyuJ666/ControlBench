@@ -1,0 +1,182 @@
+[
+  {
+    "dest": "when2call_mcq.jsonl",
+    "repo": "nvidia/When2Call",
+    "revision": "0582f7749df63a96fdc3070932e83e72396ace53",
+    "path": "test/when2call_test_mcq.jsonl",
+    "sha256": "8c3694e583eeeb8dbc297e6cd90da70efc68efa4b6adb7227523e828c6b7b14c",
+    "note": "3,652 benchmark items: call / clarify / abstain.",
+    "bytes": 20424385
+  },
+  {
+    "dest": "when2call_train_pref.jsonl",
+    "repo": "NVIDIA/When2Call",
+    "commit": "ecc8d42388e91ab37e7e737d48e16e8ecea3d1dc",
+    "path": "data/train/when2call_train_pref.jsonl",
+    "sha256": "d90637f108fabf1b097493c5818c3692e1d73140259d2f8e490536255e765bc4",
+    "note": "9,000 preference rows; the contrast pairs come from here. NVIDIA's own train split, disjoint from the mcq items.",
+    "bytes": 17369692
+  },
+  {
+    "dest": "bfcl_multi_turn/base.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_multi_turn_base.json",
+    "sha256": "1a21a995d06fd6f20ba55de7bced30ef953ec35e998f502ec2ecf4d66ef1c43a",
+    "note": "multi_turn base: 200 entries.",
+    "bytes": 390425
+  },
+  {
+    "dest": "bfcl_multi_turn/miss_func.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_multi_turn_miss_func.json",
+    "sha256": "87d28ce10e37d864b72de85d5732eef2a867b241d6c1c99b4ae682c9e3ea921c",
+    "note": "multi_turn miss_func: 200 entries.",
+    "bytes": 401159
+  },
+  {
+    "dest": "bfcl_multi_turn/miss_param.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_multi_turn_miss_param.json",
+    "sha256": "f0c66dda3795f5f53e3e1c0cc8ba0246b6761c8f58bdba8317203bf451ab8838",
+    "note": "multi_turn miss_param: 200 entries.",
+    "bytes": 402974
+  },
+  {
+    "dest": "bfcl_multi_turn/answer_base.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v4_multi_turn_base.json",
+    "sha256": "1fee67823b317571649177dd89d63969feaae4e810cc7448ee55ba797fb7c8fc",
+    "note": "multi_turn base: per-turn reference calls.",
+    "bytes": 78931
+  },
+  {
+    "dest": "bfcl_multi_turn/answer_miss_func.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v4_multi_turn_miss_func.json",
+    "sha256": "69e679b806d1c871b05393a4b95583bb973248e5b8d96c2d7f4ca05e29fc32e6",
+    "note": "multi_turn miss_func: per-turn reference calls.",
+    "bytes": 80589
+  },
+  {
+    "dest": "bfcl_multi_turn/answer_miss_param.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v4_multi_turn_miss_param.json",
+    "sha256": "59c442901779e2c31c33abcd566d032e03736e5ad8069de2fe05489873046ecf",
+    "note": "multi_turn miss_param: per-turn reference calls.",
+    "bytes": 80816
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/gorilla_file_system.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/gorilla_file_system.json",
+    "sha256": "c4c1b741c71e2a17c97a5dc9c4a91d89978c4eaece56494d14272d5df6c650e9",
+    "note": "tool documentation for the gorilla_file_system backend.",
+    "bytes": 13953
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/math_api.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/math_api.json",
+    "sha256": "83fa31708c89442bdcf12ac4dfbe3be8663ec9183a1b1524a9fda98164bc7e0b",
+    "note": "tool documentation for the math_api backend.",
+    "bytes": 9158
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/memory_kv.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/memory_kv.json",
+    "sha256": "96480cd9cbd3d4a34cd8f78879bc6622731768a26e080f7a34782e36e3402287",
+    "note": "tool documentation for the memory_kv backend.",
+    "bytes": 9087
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/memory_rec_sum.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/memory_rec_sum.json",
+    "sha256": "4ceff946df00983c7f0b95d1b70ae402247f3312fb898bac9ecfa1de52f5a783",
+    "note": "tool documentation for the memory_rec_sum backend.",
+    "bytes": 2501
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/memory_vector.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/memory_vector.json",
+    "sha256": "917908ca99fdd01e203274b7ec6eb2347fa91d57f3c6341e20945cc9c9d746cf",
+    "note": "tool documentation for the memory_vector backend.",
+    "bytes": 7287
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/message_api.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/message_api.json",
+    "sha256": "4d58ea933a5d2b280d7a52366617fb47fecd333d7b0e08e724db6fa12fb5f847",
+    "note": "tool documentation for the message_api backend.",
+    "bytes": 6027
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/posting_api.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/posting_api.json",
+    "sha256": "87f9fc404a06e4107d7c366f1399c596440e84c16cb119faf374b2f532d86e8b",
+    "note": "tool documentation for the posting_api backend.",
+    "bytes": 10573
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/ticket_api.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/ticket_api.json",
+    "sha256": "31324e0380782664fe82ba05bd23517808ad55692b45a5fe7c3d4d395fe4f0f8",
+    "note": "tool documentation for the ticket_api backend.",
+    "bytes": 6648
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/trading_bot.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/trading_bot.json",
+    "sha256": "1a7933fd8f0cb8fbec38aeae05cb8c24132747cad4904fe1c13ac3d01fc22c2d",
+    "note": "tool documentation for the trading_bot backend.",
+    "bytes": 12608
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/travel_booking.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/travel_booking.json",
+    "sha256": "f17b950c13adddf41d0848077df58788252e4c2e7cad5cfa71c8c4bf04f57b26",
+    "note": "tool documentation for the travel_booking backend.",
+    "bytes": 16979
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/vehicle_control.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/vehicle_control.json",
+    "sha256": "0c8a66292844874ef7b168f343bc394d8615d2d9e1f4387999a9ee23011eac78",
+    "note": "tool documentation for the vehicle_control backend.",
+    "bytes": 17545
+  },
+  {
+    "dest": "bfcl_multi_turn/func_doc/web_search.json",
+    "repo": "ShishirPatil/gorilla",
+    "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/web_search.json",
+    "sha256": "61fcee411e35f7ff67415e18cd67276615cf06e1c8841a683d2d997dbb46eac5",
+    "note": "tool documentation for the web_search backend.",
+    "bytes": 2252
+  }
+]
