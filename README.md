@@ -7,6 +7,9 @@ under its own directory, with its own README, data and pipeline.
 
 ## Domains
 
+- `cot/` — MATH500 reasoning with normal/CoT prompts and repsteer DiffMean, LAT,
+  LinearProbe. See [cot/README.md](cot/README.md) for setup and commands.
+
 - `instruction_following/` — hidden instruction following. A steering
   vector, not the prompt, has to make the model obey a formatting rule it
   was never told. Five rule-checkable tasks on OpenAssistant questions,

@@ -1,0 +1,5 @@
+repsteer @ git+https://github.com/binhu02/repsteer.git@2977008e32cc283dc2f37550bdfe215de1a7c02a
+transformers>=5,<6
+torch>=2.6
+math-verify==0.8.0
+sentencepiece
