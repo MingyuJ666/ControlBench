@@ -1,0 +1,71 @@
+"""The single-turn evaluation set.
+
+inputs/eval.jsonl holds 3,109 items. One set: every configuration is evaluated
+on all of it and reported on its own, so nothing is held out and the three
+targets need not be equal in size. Each is measured separately, and its count
+decides only the width of its own interval.
+
+    item_id            When2Call's uuid, prefixed w2c_
+    target             the action the situation calls for
+    split              which side of the original 50/50 division it fell on,
+                       recorded so an experiment that wants to select on one
+                       half can, and not used here
+    lineage            the upstream scenario; the division was drawn over these
+    tools, messages    the tool list and the conversation, ending on the user
+    gold               tool_names, and where one could be built, followup
+
+`gold.followup` scripts a second turn: for a clarify item the user supplies the
+withheld argument, for an abstain item the missing tool comes back. Call items
+have none -- they are complete at the decision. 1,883 of the 3,109 items carry
+one (873 clarify, 1,010 abstain), played by the domain's next_turn hook.
+
+    python -m control_bench.domains.tool_use.single_turn.items
+"""
+
+import json
+
+from ..schema import INPUTS, TARGETS
+
+EVAL = INPUTS / "eval.jsonl"
+
+
+def load_items() -> list[dict]:
+    """Every evaluation item, with the file's invariants checked as it is read."""
+    rows, seen = [], set()
+    with EVAL.open(encoding="utf-8") as handle:
+        for number, line in enumerate(handle, start=1):
+            row = json.loads(line)
+            item_id = row["item_id"]
+            if item_id in seen:
+                raise ValueError(f"duplicate item_id {item_id!r} in {EVAL} at line {number}")
+            seen.add(item_id)
+            if row["target"] not in TARGETS:
+                raise ValueError(f"{item_id}: unknown target {row['target']!r}")
+            if not row["messages"] or row["messages"][-1]["role"] != "user":
+                raise ValueError(f"{item_id}: an item must end on a user message")
+            followup = row["gold"].get("followup")
+            if followup is not None and (followup.get("slot") is None) == (
+                    followup.get("restored_tool") is None):
+                raise ValueError(f"{item_id}: a follow-up needs slot/value or "
+                                 "restored_tool, not both and not neither")
+            rows.append(row)
+    return rows
+
+
+def eval_items(target: str) -> list[dict]:
+    """The evaluation items of one target, in item_id order."""
+    if target not in TARGETS:
+        raise ValueError(f"target must be one of {TARGETS}, got {target!r}")
+    return [row for row in load_items() if row["target"] == target]
+
+
+def main() -> None:
+    print(f"{len(load_items())} items <- {EVAL}")
+    for target in TARGETS:
+        items = eval_items(target)
+        followups = sum(1 for item in items if item["gold"].get("followup"))
+        print(f"  {target:8s} {len(items):5d} items   with follow-up {followups}")
+
+
+if __name__ == "__main__":
+    main()

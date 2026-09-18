@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "domain": "tool_use",
+  "description": "Tool-use decision steering. Given a user request and a tool list, an agent must call the right tool, ask for a missing argument, or decline when no tool fits. Three files, one vocabulary of targets: extraction.jsonl holds the contrastive pairs both tracks learn directions from, eval.jsonl the single-turn evaluation items, and multi_turn.jsonl the conversations whose calls are executed.",
+  "actions": {
+    "call": "The response invokes a tool.",
+    "clarify": "No call; the response asks the user to supply or confirm something before it proceeds. A request phrased as a statement (\"Please provide the URL.\") and a response that apologises first and then asks both count: what matters is that the assistant is waiting for the user to give it something.",
+    "abstain": "No call; the response says it cannot do the task, lacks the tool or capability, or refuses, and does not ask the user for information. Suggesting the user do it themselves is still abstain.",
+    "direct": "No call; the response acts as if the task were done or answers from its own knowledge: results, lists, facts, a solution, instructions, or a fabricated outcome (\"Your order has been placed\"). A closing courtesy question (\"Is there anything else?\") does not make it clarify. It is a negative-side action only: the correct answer is never to invent one."
+  },
+  "files": {
+    "extraction.jsonl": {
+      "rows": 8100,
+      "sha256": "0760098e658f79f4545a057d9a05c966efd57c149bf2346ddb25b808f56fdc12"
+    },
+    "eval.jsonl": {
+      "rows": 3109,
+      "sha256": "f48b064316c6a0be62d5ce36a0852c63a4cc11784f11e92501b03707d369c712"
+    },
+    "multi_turn.jsonl": {
+      "rows": 600,
+      "sha256": "5df4ad11417ab671193ae8c50a7a92fea4471b1b3703c00a0cecacbe151f3f81"
+    }
+  },
+  "extraction": {
+    "purpose": "Learning steering directions. One user request, a tool list, and two candidate responses that take different actions; both sides share a prompt, so what separates them is the response.",
+    "row": {
+      "pair_id": "1-based line number in when2call_train_pref.jsonl, the natural key",
+      "target": "the action the positive response takes: call, clarify or abstain",
+      "tools": "the tool list offered, BFCL type names mapped to JSON Schema names",
+      "messages": "the conversation up to and including the user's request",
+      "positive": "the response the situation calls for; a tool call is a bare JSON list of {name, arguments}, rendered into BFCL prompting syntax at use",
+      "negative": "the other response of the same row, which takes a different action",
+      "negative_action": "call, clarify, abstain or direct"
+    },
+    "draw": {
+      "seed": 20260910,
+      "pairs_per_target": 2700,
+      "pairs_per_negative_action": 900,
+      "sizes": {
+        "call": 2700,
+        "clarify": 2700,
+        "abstain": 2700
+      },
+      "constraint": "sampled without replacement, and no user request is used twice within a target"
+    },
+    "construction": "8,804 labelled pairs -> 2,700 per target. For each target, the rows whose chosen side performs it are grouped by what the rejected side performs, and 900 are drawn from each group, skipping any row whose user request is already used. The group with the fewest distinct requests draws first, since the groups share a pool of requests and the one with the least room cannot fill its quota if it draws last. Equal counts per group make the negative pile exactly one third each, so no counterpart dominates the direction by weight."
+  },
+  "items": {
+    "purpose": "Evaluation. The model decides, then a scripted user supplies what was missing and the model acts.",
+    "row": {
+      "item_id": "When2Call's uuid, prefixed w2c_",
+      "target": "the action the situation calls for: call, clarify or abstain",
+      "split": "which side of the original 50/50 division this item fell on; recorded, not used",
+      "lineage": "the upstream scenario this item was derived from; sibling items share it, which is what the division was drawn over",
+      "tools": "the tool list offered",
+      "messages": "the conversation, ending on the user's request",
+      "gold": "tool_names (the tool a correct call names; null for abstain) and, where one could be built, followup: the scripted second turn. followup carries user_reply, action, tool_names, and either slot/value (the withheld argument the user then supplies) or restored_tool (the tool that comes back)."
+    },
+    "sizes": {
+      "call": 1226,
+      "clarify": 873,
+      "abstain": 1010
+    },
+    "with_followup": {
+      "call": 0,
+      "clarify": 873,
+      "abstain": 1010
+    },
+    "evaluation": "One set. Every configuration is evaluated on all of it and reported on its own, so nothing is held out and the three targets need not be equal in size: each is measured separately, and its count decides only the width of its own interval. Call items have no follow-up; they are complete at the decision.",
+    "recorded_division": {
+      "seed": 20260708,
+      "unit": "lineage, drawn whole 50/50",
+      "sizes": {
+        "call": {
+          "dev": 607,
+          "test": 619
+        },
+        "clarify": {
+          "dev": 436,
+          "test": 437
+        },
+        "abstain": {
+          "dev": 506,
+          "test": 504
+        }
+      },
+      "note": "Each row's `split` records this division, which the current experiment does not use. It was drawn over source scenarios rather than items: When2Call derived its call, clarify and abstain variants from the same upstream scenarios, so an item-level division would put one variant on each side. An experiment that wants to select on one half can use it without rebuilding anything."
+    },
+    "construction": "3,652 mcq rows -> 3,109 items. The answer options are removed so the model writes a free-form reply, and the result is audited by hand: 1,295 -> 1,226 call, 1,062 -> 873 clarify, 1,295 -> 1,010 abstain. The audit decisions are judgements on individual items and are not reproducible from a rule."
+  },
+  "disjointness": "Extraction draws on When2Call's preference training split and the items on its mcq test split, which NVIDIA built disjoint. One of the 2,109 distinct evaluation requests also appears in extraction, the generic string \"What is the current weather?\", against a different tool list; it is kept.",
+  "sources": [
+    {
+      "dataset": "NVIDIA/When2Call",
+      "path": "data/train/when2call_train_pref.jsonl",
+      "commit": "ecc8d42388e91ab37e7e737d48e16e8ecea3d1dc",
+      "url": "https://raw.githubusercontent.com/NVIDIA/When2Call/ecc8d42388e91ab37e7e737d48e16e8ecea3d1dc/data/train/when2call_train_pref.jsonl",
+      "rows": 9000,
+      "sha256": "d90637f108fabf1b097493c5818c3692e1d73140259d2f8e490536255e765bc4",
+      "feeds": "extraction.jsonl",
+      "note": "9,000 preference rows: one user message, a tool list, a chosen and a rejected response; no action labels."
+    },
+    {
+      "dataset": "when2call_train_pref_labelled.jsonl",
+      "rows": 8804,
+      "sha256": "6977679203ffd027ccf47eb85d484d101162f2970e3fea789858a116cf672d41",
+      "built": "2026-09-08",
+      "feeds": "extraction.jsonl",
+      "note": "The source rows with an action label on both sides. Chosen: call by When2Call's <TOOLCALL> tag, clarify if the text ends with a question mark, abstain by a refusal lexicon; 150 rows matching none are dropped. Rejected: call by the tag (1,966); the other 6,884 were read and labelled one by one against the definitions in `actions` above. 46 rows whose two sides carry the same action are dropped. Not published: extraction.jsonl is drawn from it and carries what the benchmark uses."
+    },
+    {
+      "dataset": "nvidia/When2Call",
+      "path": "test/when2call_test_mcq.jsonl",
+      "revision": "0582f7749df63a96fdc3070932e83e72396ace53",
+      "rows": 3652,
+      "sha256": "8c3694e583eeeb8dbc297e6cd90da70efc68efa4b6adb7227523e828c6b7b14c",
+      "feeds": "eval.jsonl",
+      "note": "3,652 labelled decision points as multiple choice. Hugging Face dataset repository."
+    },
+    {
+      "dataset": "ShishirPatil/gorilla",
+      "paths": [
+        "berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v4_multi_turn_{base,miss_func,miss_param}.json",
+        "berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v4_multi_turn_{base,miss_func,miss_param}.json",
+        "berkeley-function-call-leaderboard/bfcl_eval/data/multi_turn_func_doc/*.json"
+      ],
+      "commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+      "url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/6ea57973c7a6097fd7c5915698c54c17c5b1b6c8/berkeley-function-call-leaderboard/bfcl_eval/data/",
+      "rows": 600,
+      "feeds": "multi_turn.jsonl",
+      "note": "200 conversations in each of three categories, their per-turn reference calls, and the tool documentation of the twelve executable backends. The backend classes, the executor and the official checker come from the bfcl-eval package (2026.3.23), not from these files."
+    }
+  ],
+  "frozen_on": "2026-09-10",
+  "multi_turn": {
+    "purpose": "Evaluation on conversations whose calls are executed. A model's calls run against BFCL's stateful backends and their results feed back, so the same steering is tested where an action has consequences.",
+    "row": {
+      "item_id": "BFCL's entry id, such as multi_turn_miss_func_0",
+      "target": "the action the conversation calls for: call, clarify or abstain",
+      "category": "BFCL's own name for the category: base, miss_param or miss_func",
+      "tools": "the tool list the conversation starts with: the documentation of every backend class it involves, minus the functions held back",
+      "injections": "turn index -> the function documentation restored at that turn",
+      "answer": "BFCL's per-turn reference calls; an empty list means the turn calls for no tool at all",
+      "entry": "BFCL entry consumed by the official checker; local corrections are recorded in multi_turn_corrections.json."
+    },
+    "sizes": {
+      "call": 200,
+      "clarify": 200,
+      "abstain": 200
+    },
+    "categories": {
+      "base": "call -- everything a turn needs is on hand",
+      "miss_param": "clarify -- a turn lacks a required value, and the next user turn supplies it",
+      "miss_func": "abstain -- a turn lacks the tool it needs, restored a turn later"
+    },
+    "blocked_turns": {
+      "call": 3,
+      "clarify": 203,
+      "abstain": 203
+    },
+    "note": "A blocked turn is one whose reference calls are empty: the model should call nothing there. BFCL's official checker skips those turns, so they are where this benchmark reads clarify and abstain behaviour instead.",
+    "construction": "The three category files and their reference answers are taken at the pinned commit below, and the tool list of each conversation is resolved once from the documentation of its involved backend classes, with the functions listed in the entry's missed_function held back and recorded under injections. BFCL ships parameter types under Python names; they are rewritten to the JSON Schema names the parser and the chat templates expect.",
+    "corrections": {
+      "file": "multi_turn_corrections.json",
+      "sha256": "00c410ce845f858da058ca0ae56aff8f3239d99daef6ca5783a9e26a5e916216",
+      "count": 1,
+      "date": "2026-09-16"
+    }
+  }
+}

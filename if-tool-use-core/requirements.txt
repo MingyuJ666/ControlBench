@@ -1,0 +1,12 @@
+# Main environment: learning directions, steering, generation, scoring.
+# Pinned dependencies for the current benchmark pipeline.
+# Select the PyTorch CUDA build for the target GPU and driver.
+
+torch==2.12.1
+transformers==5.12.1
+accelerate==1.14.0
+huggingface-hub==1.21.0
+safetensors==0.8.0
+numpy==1.26.4
+pysbd==0.3.4
+repsteer==0.2.4

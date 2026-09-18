@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "domain": "instruction_following",
+  "description": "Carrier prompts for the instruction-following domain: first English prompter turns of OpenAssistant OASST1/OASST2, deduplicated, rule- and semantically filtered, divided into disjoint extraction and evaluation sets. Five tasks (lowercase, fixed_ending, question_ending, one_sentence, no_comma) reuse the same prompts; the instruction is appended at runtime.",
+  "files": {
+    "prompts/extraction.jsonl": {
+      "rows": 1014,
+      "sha256": "879043f2f36d239ae52eae374d8e140e088be5f34d11e44df7f2d21928381a63"
+    },
+    "prompts/eval.jsonl": {
+      "rows": 1014,
+      "sha256": "f21c627675803fd5fc37a6349e8caad29f67286f6bbdd7209de8a16de99d084f"
+    }
+  },
+  "split": {
+    "seed": 20260720,
+    "fractions": {
+      "extraction": 0.5,
+      "eval": 0.5
+    },
+    "sizes": {
+      "extraction": 1014,
+      "eval": 1014
+    },
+    "source_pool_sha256": "b5e22b11024f308cd0de92ca0f91aeda60c5251b32683a2b29b7b64655c27ec5",
+    "shared_pool_size": 2028
+  },
+  "sources": [
+    {
+      "dataset": "OpenAssistant/oasst1",
+      "revision": "fdf72ae0827c1cda404aff25b6603abec9e3399b",
+      "extracted_rows": 3482,
+      "raw_sha256": "f21be08a978dab6647d5f8c2ef223957c127659cf127aeca47f54bd3fd2df4ae",
+      "license": "Apache-2.0"
+    },
+    {
+      "dataset": "OpenAssistant/oasst2",
+      "revision": "179dd21fc55192153d94adb0e0ce8f69e222bf75",
+      "extracted_rows": 5126,
+      "raw_sha256": "4beccae3a3585e2ec767e1c02d2048856483b6d3d1987f60c0f4e54afdadbd82",
+      "license": "Apache-2.0"
+    }
+  ],
+  "construction": "8608 extracted rows -> 5252 unique -> 4228 after rule filtering -> semantic screening -> 2028 shared pool. The original fixed-seed split produced 1014 extraction, 405 dev and 609 test prompts. The evaluation file concatenates the original dev then test rows without reshuffling or changing any row. The construction scripts and full filtering record live in the instruction-following repository (aslcai/instruction-following, DATA.md and data_construction/). The two files here are verified by the sha256 values above.",
+  "frozen_on": "2026-09-06"
+}
