@@ -1,0 +1,82 @@
+{
+  "run_name": "v2_0916",
+  "methods": [
+    "caa",
+    "pca",
+    "lat",
+    "linear_probe",
+    "iti"
+  ],
+  "layer_grid": {
+    "qwen3_8b": [
+      9,
+      18,
+      27
+    ],
+    "gemma2_9b": [
+      11,
+      21,
+      32
+    ],
+    "llama31_8b": [
+      8,
+      16,
+      24
+    ]
+  },
+  "non_iti_alphas": [
+    0.5,
+    1.0,
+    1.5,
+    2.0,
+    2.5
+  ],
+  "iti_alphas": [
+    1,
+    5,
+    10,
+    15,
+    20
+  ],
+  "iti_top_heads": 48,
+  "dtype": "bfloat16",
+  "layer_convention": "zero_based_decoder_block_output",
+  "seed": 20260915,
+  "carry_forward": {
+    "qwen3_8b": [
+      "no_steering",
+      "prompted"
+    ],
+    "gemma2_9b": [
+      "no_steering",
+      "prompted",
+      "sae"
+    ],
+    "llama31_8b": [
+      "no_steering",
+      "prompted"
+    ]
+  },
+  "test_exposure": "Existing Test was evaluated in v1. v2 uses unchanged splits and Dev-only selection, with no claim of an unexposed Test.",
+  "sae_layers": [
+    9,
+    20,
+    31
+  ],
+  "sae_alphas": [
+    0.5,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0
+  ],
+  "sae_fvu_policy": "diagnostic_only",
+  "context_overrides": {
+    "gemma2_9b": {
+      "user_approved": true,
+      "max_position_embeddings": 9216,
+      "reason": "Previously approved Safety experiment context extension; no tokenizer, weights or RoPE change."
+    }
+  }
+}

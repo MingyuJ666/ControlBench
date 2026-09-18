@@ -10,6 +10,11 @@ under its own directory, with its own README, data and pipeline.
 - `cot/` — MATH500 reasoning with normal/CoT prompts and repsteer DiffMean, LAT,
   LinearProbe. See [cot/README.md](cot/README.md) for setup and commands.
 
+- `safety/` — static execution-time safety classification on model-specific
+  Qwen3, Gemma2 and Llama3.1 splits. Eight baseline families (SAE only on
+  Gemma), with Train fitting, Dev selection and frozen Test ACC/unsafe-F1.
+  See [safety/README.md](safety/README.md) for setup and protocol.
+
 - `instruction_following/` — hidden instruction following. A steering
   vector, not the prompt, has to make the model obey a formatting rule it
   was never told. Five rule-checkable tasks on OpenAssistant questions,

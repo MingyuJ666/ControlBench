@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+outputs/
+data/
+dictionaries/
+slurm-*.out
+*.pt
+*.npz
+*.safetensors

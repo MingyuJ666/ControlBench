@@ -1,0 +1,158 @@
+{
+  "source_files": [
+    "parallel/safety-steering/formal/test_contracts.py",
+    "parallel/safety-steering/formal/metrics.py",
+    "parallel/safety-steering/formal/run.py",
+    "parallel/safety-steering/formal/download_saes.py",
+    "parallel/safety-steering/formal/sae.py",
+    "parallel/safety-steering/formal/summarize.py",
+    "parallel/safety-steering/formal/runtime.py",
+    "parallel/safety-steering/formal/learners.py",
+    "parallel/safety-steering/formal/storage.py",
+    "parallel/safety-steering/formal/benchmark_prefix.py",
+    "parallel/safety-steering/formal/data.py",
+    "parallel/safety-steering/formal/preflight.py",
+    "parallel/safety-steering/formal/smoke.py",
+    "runs/v2_0916/run_v2.py",
+    "runs/v2_0916/configuration.json",
+    "runs/safety_20260915T172128Z/gemma_sae_20260915T235640Z/run_supplement.py",
+    "runs/v2_0916/delivery/summary.csv"
+  ],
+  "unchanged_core_functions": [
+    {
+      "file": "learners.py",
+      "function": "weights",
+      "ast_identical": true
+    },
+    {
+      "file": "learners.py",
+      "function": "mean",
+      "ast_identical": true
+    },
+    {
+      "file": "learners.py",
+      "function": "unit",
+      "ast_identical": true
+    },
+    {
+      "file": "learners.py",
+      "function": "projection_sd",
+      "ast_identical": true
+    },
+    {
+      "file": "learners.py",
+      "function": "probe",
+      "ast_identical": true
+    },
+    {
+      "file": "learners.py",
+      "function": "fit_residual",
+      "ast_identical": true
+    },
+    {
+      "file": "learners.py",
+      "function": "fit_iti_layer",
+      "ast_identical": true
+    },
+    {
+      "file": "metrics.py",
+      "function": "parse_label",
+      "ast_identical": true
+    },
+    {
+      "file": "metrics.py",
+      "function": "metrics",
+      "ast_identical": true
+    },
+    {
+      "file": "metrics.py",
+      "function": "selection_key",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "prompt_ids",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "completion_ids",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "encoded",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "head_layout",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "capture",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "intervene",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "predict",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "padded_inputs",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "prepare_prefix",
+      "ast_identical": true
+    },
+    {
+      "file": "runtime.py",
+      "function": "predict_batch",
+      "ast_identical": true
+    },
+    {
+      "file": "data.py",
+      "function": "read",
+      "ast_identical": true
+    },
+    {
+      "file": "data.py",
+      "function": "snapshot",
+      "ast_identical": true
+    },
+    {
+      "file": "storage.py",
+      "function": "read_tensor",
+      "ast_identical": true
+    },
+    {
+      "file": "storage.py",
+      "function": "verify_prediction",
+      "ast_identical": true
+    },
+    {
+      "file": "sae.py",
+      "function": "statistics",
+      "ast_identical": true
+    },
+    {
+      "file": "pipeline.py",
+      "function": "event",
+      "ast_identical": true
+    },
+    {
+      "file": "pipeline.py",
+      "function": "deltas",
+      "ast_identical": true
+    }
+  ]
+}
