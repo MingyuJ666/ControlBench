@@ -21,11 +21,14 @@ Use Python 3.10+ and a CUDA build of PyTorch appropriate for the machine.
 python -m venv .venv-if-tool-use
 source .venv-if-tool-use/bin/activate
 python -m pip install -r if-tool-use-core/requirements.txt
-python -m pip install -e '.[tool-use]'
+python -m pip install 'bfcl-eval==2026.3.23'
+export PYTHONPATH="$PWD/if-tool-use-core${PYTHONPATH:+:$PYTHONPATH}"
 ```
 
-The tool-use extra pins the BFCL backend used by executable multi-turn
-evaluation. The judge uses a separate environment:
+The BFCL dependency supplies the backend used by executable multi-turn
+evaluation. Commands run directly from the source checkout through `PYTHONPATH`.
+Set it again when opening a new shell, from the repository root.
+The judge uses a separate environment:
 
 ```bash
 python -m venv .venv-judge
@@ -45,14 +48,14 @@ Shipped inputs and their checksum manifests are in
 Both tool-use tracks use the latter directory.
 
 ```bash
-cbench-selfcheck --domain instruction_following
-cbench-selfcheck --domain tool_use
-cbench-selfcheck --domain tool_use_multi_turn
+python -m control_bench.cli.selfcheck --domain instruction_following
+python -m control_bench.cli.selfcheck --domain tool_use
+python -m control_bench.cli.selfcheck --domain tool_use_multi_turn
 
-cbench-run generate --domain instruction_following --method unsteered --sample 4 --dry-run
-cbench-run generate --domain tool_use --method unsteered --sample 4 --dry-run
-cbench-run generate --domain tool_use_multi_turn --method unsteered --sample 4 --dry-run
-cbench-campaign --help
+python -m control_bench.cli.run generate --domain instruction_following --method unsteered --sample 4 --dry-run
+python -m control_bench.cli.run generate --domain tool_use --method unsteered --sample 4 --dry-run
+python -m control_bench.cli.run generate --domain tool_use_multi_turn --method unsteered --sample 4 --dry-run
+python -m control_bench.cli.campaign --help
 ```
 
 Existing CLI arguments, method names and stage commands are unchanged.
@@ -63,17 +66,14 @@ data root. With that override, inputs are read from
 Multi-turn inputs still come from `tool_use/inputs/`, while its outputs remain
 under `tool_use_multi_turn/`.
 
-For source execution without installing this package, add the absolute
-`if-tool-use-core/` directory to `PYTHONPATH` and use
-`python -m control_bench.cli.run`. Keep all three project directories together.
-Editable installation is the supported checkout workflow; a wheel alone does
-not include the input datasets and needs `STEERING_DATA`.
+Keep all three project directories together so the shared runtime can discover
+the domain implementations and shipped inputs.
 
 ## Offline regression tests
 
 ```bash
-python -m pip install -e '.[test]'
-HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m pytest -q
+python -m pip install 'pytest>=9'
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m pytest -q if-tool-use-core/tests
 ```
 
 The suite uses shipped data, mocked judges, and small CPU models; it does not

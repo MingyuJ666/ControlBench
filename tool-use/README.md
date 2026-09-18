@@ -42,19 +42,23 @@ the full selected target set; legacy `split` fields do not select a subset.
 
 ## Setup
 
-Keep this directory together with `instruction-following/`,
-`if-tool-use-core/`, and the root `pyproject.toml`. Run all commands below from
-the **ControlBench repository root**, using Python 3.10+:
+Keep this directory together with `instruction-following/` and
+`if-tool-use-core/`. Run all commands below from the **ControlBench repository
+root**, using Python 3.10+:
 
 ```bash
 python -m venv .venv-if-tool-use
 source .venv-if-tool-use/bin/activate
 python -m pip install -r if-tool-use-core/requirements.txt
-python -m pip install -e '.[tool-use]'
+python -m pip install 'bfcl-eval==2026.3.23'
+export PYTHONPATH="$PWD/if-tool-use-core${PYTHONPATH:+:$PYTHONPATH}"
 ```
 
-The `tool-use` extra installs `bfcl-eval==2026.3.23`, which supplies the
-executable backends and official checker. Generation needs a suitable GPU,
+Commands run directly from the source checkout. Set `PYTHONPATH` again when
+opening a new shell, from the repository root.
+
+`bfcl-eval==2026.3.23` supplies the executable backends and official checker.
+Generation needs a suitable GPU,
 a compatible PyTorch CUDA build, and access to the selected Hugging Face model.
 Semantic judging uses a separate vLLM environment:
 
@@ -71,8 +75,8 @@ See the [shared installation guide](../if-tool-use-core/INSTALL.md) for details.
 Check both tracks without loading subject-model weights:
 
 ```bash
-cbench-selfcheck --domain tool_use
-cbench-selfcheck --domain tool_use_multi_turn
+python -m control_bench.cli.selfcheck --domain tool_use
+python -m control_bench.cli.selfcheck --domain tool_use_multi_turn
 ```
 
 ## Run experiments
@@ -85,7 +89,7 @@ requested while an argument is missing, followed by tool use once it is supplied
 Inspect a small decision-track campaign:
 
 ```bash
-cbench-campaign --domain tool_use --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain tool_use --model Qwen/Qwen3-8B \
   --methods unsteered,prompted,caa,lat --layers 9 --strengths 1.0 \
   --train-sample 32 --train-seed 42 --sample 8 --seed 42 \
   --gpus 0 --batch 2 --max-new 1024 --dry-run
@@ -94,7 +98,7 @@ cbench-campaign --domain tool_use --model Qwen/Qwen3-8B \
 Inspect the equivalent executable-conversation campaign:
 
 ```bash
-cbench-campaign --domain tool_use_multi_turn --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain tool_use_multi_turn --model Qwen/Qwen3-8B \
   --methods unsteered,prompted,caa,lat --layers 9 --strengths 1.0 \
   --train-sample 32 --train-seed 42 --sample 8 --seed 42 \
   --gpus 0 --batch 2 --max-new 1024 --dry-run
@@ -103,7 +107,7 @@ cbench-campaign --domain tool_use_multi_turn --model Qwen/Qwen3-8B \
 Remove `--dry-run` to execute a sampled campaign. For a full-data non-ITI run:
 
 ```bash
-cbench-campaign --domain tool_use --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain tool_use --model Qwen/Qwen3-8B \
   --methods unsteered,prompted,caa,lat,linear_probe,pca \
   --layers 9,18,27 --strengths 0.5,1.0,1.5,2.0,2.5 \
   --gpus 0 --batch 16 --max-new 3072
@@ -118,7 +122,7 @@ Run ITI separately; its strength values are alpha values and it selects heads
 across all layers:
 
 ```bash
-cbench-campaign --domain tool_use_multi_turn --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain tool_use_multi_turn --model Qwen/Qwen3-8B \
   --methods iti --iti-top-k 48 --iti-seed 42 --strengths 1,5,10,15,20 \
   --gpus 0 --batch 16 --max-new 3072
 ```
@@ -130,7 +134,7 @@ reply. Use `--revision` to pin the model and tokenizer revision.
 
 A campaign runs learning, generation, judging, and scoring, skipping learning
 for the two prompt baselines. Individual stages use
-`cbench-run learn|generate|judge|score --method ...`; keep the same domain,
+`python -m control_bench.cli.run learn|generate|judge|score --method ...`; keep the same domain,
 model, targets, and sampling/layer/strength configuration at every stage.
 Rerunning the same campaign reuses compatible completed stages.
 

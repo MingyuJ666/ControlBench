@@ -35,16 +35,19 @@ uses all 1,014 prompts per target; sampling is explicit.
 
 ## Setup
 
-Keep this directory together with `tool-use/`, `if-tool-use-core/`, and the
-root `pyproject.toml`. Run all commands below from the **ControlBench repository
-root**, using Python 3.10+:
+Keep this directory together with `tool-use/` and `if-tool-use-core/`.
+Run all commands below from the **ControlBench repository root**,
+using Python 3.10+:
 
 ```bash
 python -m venv .venv-if-tool-use
 source .venv-if-tool-use/bin/activate
 python -m pip install -r if-tool-use-core/requirements.txt
-python -m pip install -e .
+export PYTHONPATH="$PWD/if-tool-use-core${PYTHONPATH:+:$PYTHONPATH}"
 ```
+
+Commands run directly from the source checkout. Set `PYTHONPATH` again when
+opening a new shell, from the repository root.
 
 Generation needs a suitable GPU, a compatible PyTorch CUDA build, and access to
 the selected Hugging Face model. Judging uses a separate vLLM environment:
@@ -64,7 +67,7 @@ Check imports, dataset checksums, evaluation IDs, and training pairs without
 loading subject-model weights:
 
 ```bash
-cbench-selfcheck --domain instruction_following
+python -m control_bench.cli.selfcheck --domain instruction_following
 ```
 
 ## Run experiments
@@ -76,7 +79,7 @@ judging, and scoring; the two prompt baselines skip learning.
 Inspect a small experiment before running it:
 
 ```bash
-cbench-campaign --domain instruction_following --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain instruction_following --model Qwen/Qwen3-8B \
   --methods unsteered,prompted,caa,lat --layers 9 --strengths 0.5,1.0 \
   --train-sample 32 --train-seed 42 --sample 16 --seed 42 \
   --gpus 0 --batch 4 --max-new 512 --dry-run
@@ -88,7 +91,7 @@ budget is for a small check, not the full experiment configuration.
 A full-data campaign for the non-ITI methods:
 
 ```bash
-cbench-campaign --domain instruction_following --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain instruction_following --model Qwen/Qwen3-8B \
   --methods unsteered,prompted,caa,lat,linear_probe,pca \
   --layers 9,18,27 --strengths 0.5,1.0,1.5,2.0,2.5 \
   --gpus 0 --batch 16 --max-new 3072
@@ -105,7 +108,7 @@ The model-specific layer grids used by these experiments are:
 Run ITI separately with its head-selection parameters and alpha grid:
 
 ```bash
-cbench-campaign --domain instruction_following --model Qwen/Qwen3-8B \
+python -m control_bench.cli.campaign --domain instruction_following --model Qwen/Qwen3-8B \
   --methods iti --iti-top-k 48 --iti-seed 42 --strengths 1,5,10,15,20 \
   --gpus 0 --batch 16 --max-new 3072
 ```
@@ -116,7 +119,7 @@ items per target; `--train-sample` independently samples training pairs per
 target. Their seeds and selections must remain consistent when running stages
 separately. `--revision` can pin the model and tokenizer revision.
 
-For individual stages, use `cbench-run learn|generate|judge|score --method ...`
+For individual stages, use `python -m control_bench.cli.run learn|generate|judge|score --method ...`
 with the same domain, model, targets, and configuration. Baselines start with
 `generate`. Rerunning the same campaign reuses compatible completed stages.
 
