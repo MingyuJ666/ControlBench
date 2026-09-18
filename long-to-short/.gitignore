@@ -1,0 +1,17 @@
+# Local Python environments and interpreter artifacts
+.venv/
+.venv-gpu/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Generated experiment inputs and outputs (intentionally not versioned here)
+data/l2s/
+runs/
+results/
+.cache/
+src/slurm/out/
+
+# Partial/archived run products
+*.partial
+*.tar.gz

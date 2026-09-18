@@ -1,0 +1,9 @@
+# Install the appropriate CUDA-enabled torch wheel first, then this file.
+transformers>=5,<6
+datasets>=3,<4
+python-dotenv>=1,<2
+safetensors>=0.5
+accelerate>=1
+sae-lens>=6,<7
+matplotlib>=3.8
+# Install the pinned external repsteer checkout separately; see ../README.md.
