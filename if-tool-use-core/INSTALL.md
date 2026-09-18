@@ -9,7 +9,9 @@ Imported from `aslcai/control_benchmark` at
 `199d062495e93ea634cf1dc64fe5026f14245a9f`.
 The import changes package discovery and filesystem locations. Training,
 generation, prompts, parsing, scoring, input files, and protocol versions are
-preserved. The original README files are intentionally omitted.
+preserved. The original combined README is intentionally omitted. Domain-specific guides
+are available for [instruction following](../instruction-following/README.md)
+and [tool use](../tool-use/README.md).
 
 ## Install from the repository root
 

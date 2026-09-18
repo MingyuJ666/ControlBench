@@ -3,3 +3,5 @@ include if-tool-use-core/requirements*.txt
 recursive-include instruction-following/data/inputs *.json *.jsonl
 recursive-include tool-use/data/inputs *.json *.jsonl
 recursive-include if-tool-use-core/tests *.py *.jsonl
+include instruction-following/README.md
+include tool-use/README.md
