@@ -1,0 +1,3 @@
+{
+  "methods": ["caa", "pca", "lat", "linear_probe", "iti"]
+}

@@ -1,0 +1,9 @@
+# Python 3.11; install the CUDA 12.1 torch wheel as documented in README.md.
+torch==2.5.1
+transformers==5.5.4
+repsteer==0.2.4
+accelerate==1.13.0
+tokenizers==0.22.2
+numpy==2.1.2
+safetensors==0.8.0
+huggingface_hub==1.31.0
