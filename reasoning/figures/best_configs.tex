@@ -1,0 +1,16 @@
+\begin{tabular}{llllrrrr}
+\toprule
+Model & Method & Setting & Ext. & Dev & MATH500 & AMC23 & AIME24 \\
+\midrule
+Llama-3.1-8B-Instruct & Baseline & -- & -- & -- & 48.6 & 25.0 & 6.7 \\
+ & LAT & L20, $\alpha$=0.5 & before & 6/12 & 49.6 (+1.1) & 35.0 (+10.0) & 3.3 (-3.3) \\
+ & Probe & L20, $\alpha$=2.5 & before & 8/12 & 51.8 (+3.2) & 27.5 (+2.5) & 3.3 (-3.3) \\
+\midrule
+Qwen3-8B & Baseline & -- & -- & -- & 83.6 & 65.0 & 20.0 \\
+ & CAA & L21, $\alpha$=1.5 & after & 54/60 & 83.9 (+0.4) & 60.0 (-5.0) & 10.0 (-10.0) \\
+ & PCA & L15, $\alpha$=0.5 & after & 53/60 & 83.9 (+0.4) & 60.0 (-5.0) & 23.3 (+3.3) \\
+ & LAT & L27, $\alpha$=1.5 & after & 54/60 & 82.9 (-0.7) & 60.0 (-5.0) & 26.7 (+6.7) \\
+ & Probe & L18, $\alpha$=1 & after & 53/60 & 84.3 (+0.7) & 60.0 (-5.0) & 16.7 (-3.3) \\
+ & ITI & 48 heads, $\alpha$=0.5 & after & 52/60 & 83.2 (-0.4) & 57.5 (-7.5) & 23.3 (+3.3) \\
+\bottomrule
+\end{tabular}

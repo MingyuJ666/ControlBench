@@ -1,0 +1,26 @@
+{
+  "amc2023": {
+    "repo": "AI-MO/aimo-validation-amc",
+    "revision": "69d78a4a2c840e82d69af6bc742bda09005f6316",
+    "pattern": "/2023_AMC_12[AB]_Problems/Problem_\\d+$",
+    "count": 40,
+    "source_url": "https://huggingface.co/datasets/AI-MO/aimo-validation-amc/resolve/69d78a4a2c840e82d69af6bc742bda09005f6316/data/train-00000-of-00001.parquet",
+    "source_sha256": "4de056fd006062cee46e3900727dd5d00094b8592ed0bfd6b5dfae2267f72dd7",
+    "sha256": "2afaa003a86331ab13615cf134b75ed0ee7eca18558f5e310b6ff35c5c93d915",
+    "rows": 40,
+    "role": "test_only",
+    "upstream_split": "train"
+  },
+  "aime2024": {
+    "repo": "AI-MO/aimo-validation-aime",
+    "revision": "13f9e12f613e720c2a2b2f345dd04b998a29494d",
+    "pattern": "/2024_AIME_I{1,2}_Problems/Problem_\\d+$",
+    "count": 30,
+    "source_url": "https://huggingface.co/datasets/AI-MO/aimo-validation-aime/resolve/13f9e12f613e720c2a2b2f345dd04b998a29494d/data/train-00000-of-00001.parquet",
+    "source_sha256": "025484a99fea498e7d0c3b0ee42afcbec0176405c19c5dbf557b9f6ca6445675",
+    "sha256": "8a8d6cb5e33b42032ea8dd92084c9ed37f39d3f0efd2ee96416a2a49fa3e6816",
+    "rows": 30,
+    "role": "test_only",
+    "upstream_split": "train"
+  }
+}
