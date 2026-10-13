@@ -1,0 +1,6 @@
+# Pinned A100 judge environment, used by control_bench/cli/judge_vllm.py.
+# JUDGE_PYTHON selects the interpreter, including a Blackwell environment on B300.
+
+vllm==0.8.5.post1
+torch==2.6.0
+transformers==4.51.3

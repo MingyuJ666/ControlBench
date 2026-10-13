@@ -16,7 +16,7 @@ multi_turn categories. A row is one conversation:
 
 The file is frozen and its sha256 and provenance are in inputs/MANIFEST.json.
 
-    python -m control_bench.domains.tool_use.multi_turn.items
+    python -m core.domains.tool_use.multi_turn.items
 """
 
 import json

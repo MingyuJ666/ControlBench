@@ -11,8 +11,7 @@ PREPARATION_VERSION = 1
 
 
 def core():
-    # Lazy import avoids a cycle through the registered domain's package.
-    from ...tool_use_multi_turn import judge_core
+    from . import judge_core
     return judge_core
 
 

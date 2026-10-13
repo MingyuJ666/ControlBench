@@ -100,7 +100,7 @@ def build_records(target: str, split: str, items: list[dict], outputs: list[dict
 
 
 def merge(records: list[dict], verdicts: dict[str, dict]) -> None:
-    from ...tool_use_multi_turn.judge_core import _fields
+    from .judge_core import _fields
     for record in records:
         index = record["judge_turn_index"]
         if index is None:

@@ -14,6 +14,10 @@ from .tasks import TASKS, make_pair, make_prompted_prompt
 NAME = "instruction_following"
 INPUTS = input_root(NAME)
 EVAL_SPLIT = "full"
+EVAL_SPLITS = ("full", "dev", "test")
+# MANIFEST.json construction: eval concatenates the original 405 dev rows,
+# then 609 test rows, without reshuffling.
+DEV_SIZE = 405
 
 
 def load_prompts(split: str) -> list[dict]:
@@ -40,14 +44,18 @@ def extraction_pairs(task: str) -> list[dict]:
 
 
 def eval_items(task: str, split: str = "full") -> list[dict]:
-    """The complete evaluation set shared by all targets."""
-    if split != EVAL_SPLIT:
-        raise ValueError(f"evaluation split is {EVAL_SPLIT!r}, got {split!r}")
+    """Shared carrier prompts from the full pool or its original dev/test split."""
+    if split not in EVAL_SPLITS:
+        raise ValueError(f"choose an evaluation split from {EVAL_SPLITS}, got {split!r}")
     prompts = load_prompts("eval")
+    if split == "dev":
+        prompts = prompts[:DEV_SIZE]
+    elif split == "test":
+        prompts = prompts[DEV_SIZE:]
     out = []
     for row in prompts:
         base = row["text"].strip()
-        out.append({"task": task, "item_id": f"{task}_full_{row['prompt_id']}", "prompt_id": row["prompt_id"],
+        out.append({"task": task, "item_id": f"{task}_{split}_{row['prompt_id']}", "prompt_id": row["prompt_id"],
                     "base_prompt": base, "prompted_prompt": make_prompted_prompt(base, task),
                     "verifier": TASKS[task]["verifier"]})
     return out

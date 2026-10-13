@@ -1,162 +1,192 @@
 # Instruction Following
 
-This domain evaluates whether activation steering makes a model follow a response
-format while still answering the user's request. It uses the shared
-[`control_bench` runtime](../if-tool-use-core/INSTALL.md), with CLI domain ID
+This domain measures whether activation steering helps a model follow a response
+format while answering the user's request. Its CLI domain ID is
 `instruction_following`.
 
-During direction learning, each carrier prompt forms a contrastive pair: the
-prompt with the target instruction and the same prompt without it. During
-evaluation, steering methods and `unsteered` receive the plain request;
-the `prompted` baseline appends the target instruction.
+Training pairs contrast the same prompt with and without the target instruction.
+At evaluation time, steering methods and `unsteered` receive the plain request;
+`prompted` receives the request with the target instruction appended.
 
 ## Targets and data
 
-| Target ID | Requested response format |
+| Target | Response format |
 |---|---|
 | `lowercase` | No uppercase or titlecase characters |
-| `fixed_ending` | End with the exact sentence `Hope this helps!` |
-| `question_ending` | End with a question |
+| `fixed_ending` | Ends with `Hope this helps!` |
+| `question_ending` | Ends with a question |
 | `one_sentence` | Exactly one sentence |
 | `no_comma` | No commas |
 
-The exact instructions and rule checks live in
-[`tasks.py`](src/instruction_following/tasks.py).
+[Task definitions](src/instruction_following/tasks.py) contain the exact
+instructions and rule checks. All five targets use the same carrier prompts,
+derived from OpenAssistant OASST1/OASST2.
 
-| Input under `data/inputs/` | Rows | Use |
+| File under `data/inputs/` | Prompts | Purpose |
 |---|---:|---|
-| `prompts/extraction.jsonl` | 1,014 | Construct contrastive training pairs for each target |
-| `prompts/eval.jsonl` | 1,014 | Evaluate each target on the same carrier prompts |
+| `prompts/extraction.jsonl` | 1,014 | Construct training pairs for each target |
+| `prompts/eval.jsonl` | 1,014 | Evaluate each target |
 
-The two prompt sets are disjoint and come from OpenAssistant OASST1/OASST2.
-[`MANIFEST.json`](data/inputs/MANIFEST.json) records source revisions,
-construction details, row counts, and SHA-256 checksums. The default evaluation
-uses all 1,014 prompts per target; sampling is explicit.
+The extraction and evaluation sets are disjoint. [MANIFEST.json](data/inputs/MANIFEST.json)
+records their sources, construction, revisions, and checksums.
+
+| `--eval-split` | Evaluation rows | Prompts per target |
+|---|---|---:|
+| `full` (default) | All rows | 1,014 |
+| `dev` | Original first 405 rows | 405 |
+| `test` | Original remaining 609 rows | 609 |
+
+Sampling applies within the selected split. Splits have separate run directories
+and reuse compatible training artifacts.
 
 ## Setup
 
-Keep this directory together with `tool-use/` and `if-tool-use-core/`.
-Run all commands below from the **ControlBench repository root**,
-using Python 3.10+:
+Run commands from the **ControlBench repository root**, using Python 3.10+.
+The generation environment uses CUDA PyTorch and the selected Hugging Face model.
 
 ```bash
 python -m venv .venv-if-tool-use
 source .venv-if-tool-use/bin/activate
-python -m pip install -r if-tool-use-core/requirements.txt
-export PYTHONPATH="$PWD/if-tool-use-core${PYTHONPATH:+:$PYTHONPATH}"
+python -m pip install -r instruction-following/requirements.txt
 ```
 
-Commands run directly from the source checkout. Set `PYTHONPATH` again when
-opening a new shell, from the repository root.
-
-Generation needs a suitable GPU, a compatible PyTorch CUDA build, and access to
-the selected Hugging Face model. Judging uses a separate vLLM environment:
+Create the separate vLLM judge environment:
 
 ```bash
 python -m venv .venv-judge
-.venv-judge/bin/python -m pip install -r if-tool-use-core/requirements-judge.txt
+.venv-judge/bin/python -m pip install -r instruction-following/requirements-judge.txt
 export JUDGE_PYTHON="$PWD/.venv-judge/bin/python"
 ```
 
-The pinned judge requirements describe the existing A100 setup. For another
-GPU architecture, select a compatible judge environment with `JUDGE_PYTHON`.
-See the [shared installation guide](../if-tool-use-core/INSTALL.md) for environment
-details and source execution.
+The pinned judge dependencies target A100 GPUs. `JUDGE_PYTHON` selects the judge
+interpreter. `bench.py` uses the active Python environment for generation and
+sets the domain's import path.
 
-Check imports, dataset checksums, evaluation IDs, and training pairs without
-loading subject-model weights:
+Check imports, input checksums, evaluation IDs, and training pairs:
 
 ```bash
-python -m control_bench.cli.selfcheck --domain instruction_following
+python bench.py --domain instruction_following --entry selfcheck -- --out outputs/instruction_following
 ```
 
 ## Run experiments
 
-Supported method IDs are `unsteered`, `prompted`, `caa`, `lat`,
-`linear_probe`, `pca`, and `iti`. A campaign schedules learning, generation,
-judging, and scoring; the two prompt baselines skip learning.
+Available methods: `unsteered`, `prompted`, `caa`, `lat`, `linear_probe`, `pca`,
+`iti`, and `sae`. A campaign runs learning, generation, judging, and scoring.
+The `unsteered` and `prompted` baselines start at generation.
 
-Inspect a small experiment before running it:
+Preview a sampled campaign; remove `--dry-run` to execute it:
 
 ```bash
-python -m control_bench.cli.campaign --domain instruction_following --model Qwen/Qwen3-8B \
-  --methods unsteered,prompted,caa,lat --layers 9 --strengths 0.5,1.0 \
+python bench.py --domain instruction_following -- \
+  --out outputs/instruction_following \
+  --model Qwen/Qwen3-8B --methods unsteered,prompted,caa,lat \
+  --layers 9 --strengths 0.5,1.0 \
   --train-sample 32 --train-seed 42 --sample 16 --seed 42 \
   --gpus 0 --batch 4 --max-new 512 --dry-run
 ```
 
-Remove `--dry-run` to execute that sampled campaign. This short generation
-budget is for a small check, not the full experiment configuration.
-
-A full-data campaign for the non-ITI methods:
+Run the full training and evaluation sets:
 
 ```bash
-python -m control_bench.cli.campaign --domain instruction_following --model Qwen/Qwen3-8B \
-  --methods unsteered,prompted,caa,lat,linear_probe,pca \
+python bench.py --domain instruction_following -- \
+  --out outputs/instruction_following \
+  --model Qwen/Qwen3-8B --methods unsteered,prompted,caa,lat,linear_probe,pca \
   --layers 9,18,27 --strengths 0.5,1.0,1.5,2.0,2.5 \
   --gpus 0 --batch 16 --max-new 3072
 ```
 
-The model-specific layer grids used by these experiments are:
-
-| Model ID | Zero-based layers |
+| Model | Layer grid for CAA, LAT, linear probe, and PCA (zero-based) |
 |---|---|
 | `Qwen/Qwen3-8B` | `9,18,27` |
 | `google/gemma-2-9b-it` | `11,21,32` |
 | `meta-llama/Llama-3.1-8B-Instruct` | `8,16,24` |
 
-Run ITI separately with its head-selection parameters and alpha grid:
+ITI selects attention heads across all layers. Run it with its head count and
+alpha grid:
 
 ```bash
-python -m control_bench.cli.campaign --domain instruction_following --model Qwen/Qwen3-8B \
-  --methods iti --iti-top-k 48 --iti-seed 42 --strengths 1,5,10,15,20 \
+python bench.py --domain instruction_following -- \
+  --out outputs/instruction_following \
+  --model Qwen/Qwen3-8B --methods iti \
+  --iti-top-k 48 --iti-seed 42 --strengths 1,5,10,15,20 \
   --gpus 0 --batch 16 --max-new 3072
 ```
 
-ITI selects heads across all layers, so omit `--layers` for an ITI-only run.
-Use `--targets lowercase,no_comma` to select tasks. `--sample` samples evaluation
-items per target; `--train-sample` independently samples training pairs per
-target. Their seeds and selections must remain consistent when running stages
-separately. `--revision` can pin the model and tokenizer revision.
+| Option | Meaning | Default |
+|---|---|---|
+| `--out` | Output directory for this experiment | Domain output path below |
+| `--targets` | Comma-separated target IDs | All five targets |
+| `--eval-split` | Evaluation partition | `full` |
+| `--sample`, `--seed` | Evaluation prompts per target and sampling seed | All prompts; seed 42 when sampling |
+| `--train-sample`, `--train-seed` | Training pairs per target and sampling seed | All pairs; seed 42 when sampling |
+| `--max-new` | Generated tokens per response | 3,072 |
+| `--revision` | Model and tokenizer revision | Model repository default |
 
-For individual stages, use `python -m control_bench.cli.run learn|generate|judge|score --method ...`
-with the same domain, model, targets, and configuration. Baselines start with
-`generate`. Rerunning the same campaign reuses compatible completed stages.
+Use `--entry run -- <stage>` for a single `learn`, `generate`, `judge`, or `score`
+stage, with `--method`, the same `--out`, and the same experiment settings.
+Repeating a campaign reuses compatible completed stages.
+
+## Gemma SAE
+
+SAE supports `google/gemma-2-9b-it` at revision
+`11c9b309abf73637e4b6f9a3fa1e92e615547819`, using dictionary layers **9, 20, 31**.
+The same SAE method is available in both tool-use tracks.
+
+Learning selects one Gemma Scope feature per target and layer from the
+positive-minus-negative training activation mean. Generation adds the feature's
+decoder direction with the residual-norm strength convention. Feature selection
+uses the training pairs. Dictionary files are pinned by revision and SHA-256.
+
+```bash
+python bench.py --domain instruction_following -- \
+  --out outputs/instruction_following \
+  --model google/gemma-2-9b-it \
+  --revision 11c9b309abf73637e4b6f9a3fa1e92e615547819 \
+  --methods sae --layers 9,20,31 --strengths 0.5,1,1.5,2,2.5 \
+  --train-sample 100 --train-seed 42 --sample 20 --seed 42 \
+  --gpus 0 --batch 4 --max-new 3072 --dry-run
+```
+
+Learning downloads approximately 470 MB of dictionary weights per layer.
+`CONTROLBENCH_SAE_CACHE` selects their cache directory; the default is under
+the directory selected by `--out`, or IF's default output cache. SAE uses the generation environment's existing dependencies.
+For tool use, select `--domain tool_use` or `tool_use_multi_turn` and its
+corresponding `--out` directory.
 
 ## Evaluation and outputs
 
-A successful answer must pass the target's format rule and receive a coherent,
-adequate-answer verdict from the blind Qwen3-8B judge. Reports include
-`accuracy`, `rule_rate`, `incoherent_rate`, `partial_rate`, `none_rate`, and
-`truncation_rate`. Truncation is recorded separately; missing required judge
-verdicts prevent final scoring.
+Success requires both the target's format rule and a coherent, adequate-answer
+verdict from the blind Qwen3-8B judge. Summaries report `accuracy`, `rule_rate`,
+`incoherent_rate`, `partial_rate`, `none_rate`, and `truncation_rate`.
+Final scoring requires the semantic verdicts for every evaluated response.
 
-Outputs are written relative to the repository root:
+`--out DIR` places `artifacts/`, `runs/`, and `cache/` directly under `DIR`.
+Campaign logs go to `DIR/logs/<model>/<experiment>/`; `--logs` selects another
+log directory. Relative paths use the repository root when launched with
+`bench.py`. Use a separate output directory for each domain or track.
+
+Without `--out`, outputs use these paths relative to the repository root:
 
 ```text
 data/instruction_following/outputs/repsteer-native-v2/
 ├── artifacts/   # Fitted steering artifacts
-├── runs/        # Generations, metadata, judge verdicts, scores, summaries
+├── runs/        # Generations, metadata, verdicts, scores, and summaries
 └── cache/
 ```
 
-Runs retain each method, target, layer/head profile, and strength configuration.
-Per-configuration files include `generations.jsonl`, `meta.json`,
-`scores.jsonl`, and `summary.json`. Campaign logs are under
-`logs/instruction_following/`.
+Each configuration retains `generations.jsonl`, `meta.json`, `scores.jsonl`,
+and `summary.json`. Without `--out`, campaign logs are under `logs/instruction_following/`.
 
-To continue an existing experiment, set `STEERING_DATA` to its absolute data
-root. Inputs then come from
-`$STEERING_DATA/instruction_following/inputs/`, and outputs remain under
+Set `STEERING_DATA` to use an external data root. Inputs then come from
+`$STEERING_DATA/instruction_following/inputs/`, and outputs go to
 `$STEERING_DATA/instruction_following/outputs/repsteer-native-v2/`.
-The default shipped inputs are in this domain directory; generated results
-are not committed.
+`--out` takes precedence for outputs and leaves the input location unchanged.
 
 ## Code and checks
 
-- [Domain implementation](src/instruction_following/): data loading, rendering,
-  task rules, and judging/scoring.
-- [Shared runtime](../if-tool-use-core/control_bench/): methods, model loading,
-  generation, CLI, and campaign scheduling.
-- [Offline tests](../if-tool-use-core/tests/): domain checks and small CPU-model
-  integration tests; see the [test command](../if-tool-use-core/INSTALL.md#offline-regression-tests).
+- [Domain implementation](src/instruction_following/): prompts, targets, rendering, and scoring.
+- [Core runtime](core/): methods, model loading, generation, and campaign scheduling.
+- [Regression tests](../tests/if_tool_use/): data, methods, judging, and execution checks.
+
+[Test commands and environment details](../README.md#checks-and-troubleshooting)
+are in the repository README.

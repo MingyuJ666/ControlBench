@@ -113,7 +113,7 @@ def _parse_bfcl(text: str):
         return False, None, False
     try:
         node = ast.parse(stripped[start:end + 1], mode="eval").body
-    except SyntaxError:
+    except (SyntaxError, MemoryError, RecursionError):
         return True, None, False
     if bare and isinstance(node, ast.Call):
         elements = [node]
@@ -136,7 +136,7 @@ def _parse_bfcl(text: str):
         for argument in element.args:
             try:
                 positional.append(ast.literal_eval(argument))
-            except (ValueError, SyntaxError):
+            except (ValueError, SyntaxError, MemoryError, RecursionError):
                 return True, None, False
         args = {}
         for keyword in element.keywords:
@@ -144,15 +144,15 @@ def _parse_bfcl(text: str):
                 return True, None, False
             try:
                 args[keyword.arg] = ast.literal_eval(keyword.value)
-            except (ValueError, SyntaxError):
+            except (ValueError, SyntaxError, MemoryError, RecursionError):
                 return True, None, False
         calls.append({"name": ".".join(reversed(parts)), "args": args,
                       "positional": positional})
-    # Python literals such as Ellipsis, bytes, sets and complex numbers are
-    # not representable tool arguments. Reject them before scoring/execution.
+    # Python literals such as Ellipsis, sets and bytes are not tool JSON values.
+    # Reject them here instead of allowing score serialization to crash later.
     try:
         json.dumps(calls, allow_nan=False)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError, RecursionError):
         return True, None, False
     outside = (stripped[:start] + stripped[end + 1:]).strip()
     return True, calls, outside

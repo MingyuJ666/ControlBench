@@ -26,7 +26,7 @@ Tool calls are stored as a bare JSON list of {name, arguments}, so the file is
 model-neutral; the subject model's own call format is applied when a pair is
 rendered, which is render.py's job.
 
-    python -m control_bench.domains.tool_use.pairs      # counts, as a check
+    python -m core.domains.tool_use.pairs      # counts, as a check
 """
 
 import json

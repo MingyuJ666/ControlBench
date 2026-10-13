@@ -11,8 +11,9 @@ contrastive pairs produced, which is the question it exists to answer: does a
 direction learned on one decision still hold where the decision has
 consequences?
 
-This package holds the track's own pieces. The registered domain that exposes
-them to the command line is control_bench.domains.tool_use_multi_turn.
+This package holds the execution engine, scoring, judge rubric, and domain
+hooks. core.domains.tool_use_multi_turn is a compatibility entry that
+keeps the existing command-line domain ID and import paths working.
 """
 
 from .driver import next_turn

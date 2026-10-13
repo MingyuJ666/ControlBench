@@ -19,7 +19,7 @@ withheld argument, for an abstain item the missing tool comes back. Call items
 have none -- they are complete at the decision. 1,883 of the 3,109 items carry
 one (873 clarify, 1,010 abstain), played by the domain's next_turn hook.
 
-    python -m control_bench.domains.tool_use.single_turn.items
+    python -m core.domains.tool_use.single_turn.items
 """
 
 import json

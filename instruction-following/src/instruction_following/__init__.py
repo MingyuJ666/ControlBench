@@ -11,7 +11,7 @@ What the shared layer needs from a domain, all here:
   messages(item)           chat messages using the selected generation prompt
   render(tok, item)        the same selected prompt rendered as a string
   prompted_items(items)    generation-only copies with the instruction appended
-  items(target, split)     full = all 1014 evaluation prompts
+  items(target, split)     full = 1014; original dev = 405, test = 609
   clean(text)              drop a stray think block
   scoring                  rule + blind judge (Qwen3-8B through vLLM, its own environment)
 """
@@ -23,7 +23,7 @@ from repsteer.data import ContrastivePairs
 from ...paths import PACKAGE_ROOT, run_dir
 from ...runtime.rendering import Rendering
 from ...runtime.search import read_jsonl, write_json, write_jsonl
-from .data import NAME, EVAL_SPLIT, INPUTS, eval_items, extraction_pairs
+from .data import NAME, EVAL_SPLIT, EVAL_SPLITS, INPUTS, eval_items, extraction_pairs
 from .render import render_chat, strip_think_blocks
 from .scoring import build_records, load_verdicts, merge, prepare_shards, summarize, judging_complete as _judging_complete
 from .tasks import TASKS

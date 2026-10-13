@@ -4,6 +4,10 @@ This directory contains the implementation of the long-to-short (L2S) reasoning-
 
 The experiment asks whether activations learned from matched long and short mathematical derivations can make a model produce shorter reasoning without losing answer accuracy. Pair construction and GPU inference are separate stages.
 
+See the [repository guide](../README.md) for the other ControlBench domains.
+Run the commands in this guide from **`long-to-short/`** (`cd long-to-short`
+from the repository root).
+
 ## What is in this directory
 
 ```text
@@ -73,7 +77,12 @@ L2S_GPU_PYTHON=python3 bash src/inference_non_iti.sh plan --pairs /absolute/path
 L2S_GPU_PYTHON=python3 bash src/inference_iti.sh plan --pairs /absolute/path/to/l2s
 ```
 
-The ordinary order for one model is `fit`, `baselines`, `grid`, `judge`, then `report`. The default output location is `runs/`; set `L2S_RUN_ROOT` to put large artifacts on scratch storage. Examples:
+The ordinary order for one model is `fit`, `baselines`, `grid`, `judge`, then `report`.
+The non-ITI and ITI wrappers default to `runs-non-iti/` and `runs-iti/`, respectively;
+the combined `inference.sh` track defaults to `runs/`. Set `L2S_RUN_ROOT` or `--root`
+to put artifacts elsewhere. An explicit root overrides the track-specific defaults,
+so choose separate roots for the two tracks and keep each root consistent across
+stages. Examples:
 
 ```bash
 bash src/inference_non_iti.sh fit --model Llama-3.1-8B --pairs /absolute/path/to/l2s

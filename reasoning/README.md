@@ -4,6 +4,30 @@ Compares an unsteered baseline, CoT prompting, and representation steering on LL
 mathematical reasoning. Evaluation sets are MATH500, AMC2023, and AIME2024; generation
 and interventions use Transformers / repsteer.
 
+See the [repository guide](../README.md) for how this pipeline differs from the other
+ControlBench domains.
+
+## Fresh-checkout prerequisites
+
+The checked-in code and math JSONL files are not a complete experiment handoff.
+Before running the workflows below, supply:
+
+- A compatible Python environment and local model checkpoints. This domain does not
+  ship a complete requirements lock; the `.venv-vllm` path below describes a historical
+  environment, not one included in the repository.
+- `models.local.json` with `open_weight_models` entries containing `model`, `revision`,
+  and `local_path` for commands that use the configured model.
+- The fixed split at `outputs/archive/data/math500/steering_run/split.json`, or a
+  compatible split selected by `REASONING_SPLIT`.
+- For `evaluate` / `suite`, the audit `pairs.jsonl` beside that split and the historical
+  `outputs/repsteer_tuning/config.json`. The split override does not relocate the latter.
+- For Gemma fitting, `data/negative_gemma.jsonl`, which must be generated or supplied.
+
+These local configuration, split/audit, and Gemma-negative files are absent from this
+checkout. Obtain compatible historical artifacts for reproduction; the run does not
+reconstruct them automatically. Experiment `dry-run` commands also read their required
+configuration/data. `python -m reasoning --help` can list entry points without them.
+
 ## Pipeline
 
 `prepare data → extract activations → learn directions / select features → tune on dev → test with a fixed config`
@@ -125,7 +149,7 @@ Gemma Scope JumpReLU weights and currently supports Gemma-2-9B only.
 
 ### Generation budget
 
-Every stage uses one budget: `MAX_TOKENS` in `common.py` (currently 8192). It is the default
+Every stage uses one budget: `MAX_TOKENS` in `common.py` (currently 2048). It is the default
 `--max-tokens` of `tune` (screen and confirmation), `suite` (dev selection and tests),
 `evaluate`, `compare`, and `sample`, and the Qwen pipeline passes it to the suite. Change it
 there once rather than per command; passing `--max-tokens` overrides it for one run and is
@@ -289,7 +313,8 @@ problems.
 - `data/negative_llama.jsonl`: historical Llama-3.1-8B-Instruct vLLM solutions, 500 entries,
   kept for baseline reuse and reverse validation of old vectors. `data/negative.jsonl` is a
   compatibility symlink to it.
-- `data/negative_gemma.jsonl`: Gemma-2-9B-IT solutions, 500 entries.
+- `data/negative_gemma.jsonl`: expected Gemma-2-9B-IT solutions, 500 entries;
+  not included in this checkout.
 - `data/negative_qwen.jsonl`: Qwen3-8B solutions with thinking disabled, 500 entries.
 
 The negative files are produced by `python -m reasoning.scripts.generate_negatives`:
