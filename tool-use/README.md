@@ -186,8 +186,6 @@ the input location unchanged.
 - [Decision track](src/tool_use/single_turn/): evaluation items, follow-ups, and scoring.
 - [Executable track](src/tool_use/multi_turn/): conversation execution, domain hooks, judge rules, and scoring.
 - [Core runtime](core/): methods, model loading, generation, and campaign scheduling.
-- [Regression tests](../tests/if_tool_use/): data, methods, judging, and execution checks.
 
 `src/tool_use_multi_turn.py` registers the executable track under its CLI domain ID.
-[Test commands and environment details](../README.md#checks-and-troubleshooting)
-are in the repository README.
+[Unified launcher options](../README.md#usage) are in the repository README.

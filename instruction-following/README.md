@@ -186,7 +186,5 @@ Set `STEERING_DATA` to use an external data root. Inputs then come from
 
 - [Domain implementation](src/instruction_following/): prompts, targets, rendering, and scoring.
 - [Core runtime](core/): methods, model loading, generation, and campaign scheduling.
-- [Regression tests](../tests/if_tool_use/): data, methods, judging, and execution checks.
 
-[Test commands and environment details](../README.md#checks-and-troubleshooting)
-are in the repository README.
+[Unified launcher options](../README.md#usage) are in the repository README.
