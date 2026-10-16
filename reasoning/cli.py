@@ -5,20 +5,11 @@ import json
 import sys
 from .common import OUTPUTS, read_status
 
-COMMANDS = {
-    'suite':'reasoning.scripts.paper_baselines',
-    'evaluate':'reasoning.experiments.evaluate',
-    'teacher-repair':'reasoning.experiments.teacher',
-    'sample':'reasoning.experiments.sample',
-    'compare':'reasoning.experiments.compare',
-    'tune':'reasoning.experiments.tune',
-    'reverse':'reasoning.experiments.reverse',
-}
-
 
 def main():
-    parser = argparse.ArgumentParser(description='Reasoning: LLM / steering / baseline / datasets / GPT workflows')
-    parser.add_argument('command',choices=[*COMMANDS,'status'])
+    parser = argparse.ArgumentParser(description='Unified steering for llama, qwen, and gemma')
+    parser.add_argument('command', choices=['run','start','dry-run','status'],
+                        metavar='{run,start,dry-run,status}')
     parser.add_argument('arguments',nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.command == 'status':
@@ -32,6 +23,7 @@ def main():
                         runs[str(path.relative_to(OUTPUTS))] = read_status(path)
         print(json.dumps(runs,indent=2))
         return
-    module = importlib.import_module(COMMANDS[args.command])
-    sys.argv = [f'python -m reasoning {args.command}',*args.arguments]
+    module = importlib.import_module('reasoning.scripts.paper_baselines')
+    sys.argv = [f'python -m reasoning {args.command}',
+                args.command, *args.arguments]
     module.main()

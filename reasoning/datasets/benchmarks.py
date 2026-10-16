@@ -5,7 +5,7 @@ import json
 import re
 import urllib.request
 from pathlib import Path
-from reasoning.common import SPLIT, PAIRS, digest, read_jsonl, write_json, ROOT
+from reasoning.common import SPLIT, digest, read_jsonl, write_json, ROOT
 from reasoning.datasets import load, problem_id
 
 
@@ -99,7 +99,7 @@ def load_external(directory=DATA):
     return result
 
 
-def audit_split(split, math_rows, pairs, historical):
+def audit_split(split, math_rows, pairs):
     expected = {k: len(split[k]) for k in ('extraction', 'dev', 'eval')}
     if tuple(expected.values()) not in ((200, 20, 280), (160, 60, 280)):
         raise ValueError('Unsupported MATH500 split sizes')
@@ -119,22 +119,22 @@ def audit_split(split, math_rows, pairs, historical):
         raise ValueError('Extraction pair leakage or duplicates')
     if any(r['id'] != problem_id(r['problem']) for r in pairs):
         raise ValueError('Pair problem/ID mismatch')
-    screen, confirm = historical['screen_ids'], historical['confirm_ids']
-    if screen != split['dev'][:8] or confirm != split['dev'][8:20]:
-        raise ValueError('Historical tuning is not the expected 8/12 dev partition')
+    if set(pair_ids) != groups['extraction']:
+        raise ValueError('Pairs must cover the complete extraction split')
+    lookup = {r['id']: r for r in math_rows}
+    if any(r['problem'] != lookup[r['id']]['problem'] for r in pairs):
+        raise ValueError('Pair problem differs from original data')
     return dict(split_sizes=expected, extraction_pairs=len(pairs),
-                confirmation_count=len(confirm), confirmation_is_dev_tail=(confirm == split['dev'][8:]),
-                historical_dev_count=len(screen + confirm),
-                confirmation_eval_overlap=len(set(confirm) & groups['eval']),
+                extraction_eval_overlap=len(groups['extraction'] & groups['eval']),
+                dev_eval_overlap=len(groups['dev'] & groups['eval']),
                 math500_test_note='Repeated evaluation: these 280 questions have been evaluated before.',
                 overlap_check='Whitespace-normalized exact problem hashes; not semantic deduplication.')
 
 
-def load_suite(directory=DATA, *, split_path=SPLIT, pairs_path=PAIRS):
+def load_suite(directory=DATA, *, split_path=SPLIT, pairs_path):
     split = json.loads(split_path.read_text())
     math_rows = load()
-    historical = json.loads((ROOT / 'outputs/repsteer_tuning/config.json').read_text())
-    audit = audit_split(split, math_rows, read_jsonl(pairs_path), historical)
+    audit = audit_split(split, math_rows, read_jsonl(pairs_path))
     lookup = {r['id']: r for r in math_rows}
     datasets = load_external(directory)
     seen = set(lookup)

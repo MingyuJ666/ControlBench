@@ -10,7 +10,7 @@ import time
 
 from reasoning.common import (ROOT, SPLIT, MAX_TOKENS, SYSTEM, SUFFIX, COT_SUFFIX, Journal,
     code_hashes, digest, dispatch, open_weight_model, prepare_run, read_jsonl,
-    state, steering_grid, write_json)
+    state, steering_grid, write_json, load_local)
 from reasoning.datasets import load
 from reasoning.datasets.benchmarks import load_suite
 from reasoning.evaluation import score
@@ -18,6 +18,33 @@ from reasoning.evaluation import score
 DEFAULT_METHODS = ('caa', 'pca', 'lat', 'probe', 'iti')
 METHODS = (*DEFAULT_METHODS, 'diffmean', 'sae')
 STRENGTH_GRID_FOR_ITI = [1, 5, 10, 15, 20]
+MODEL_IDS = {'llama': 'meta-llama/Llama-3.1-8B-Instruct',
+             'qwen': 'Qwen/Qwen3-8B', 'gemma': 'google/gemma-2-9b-it'}
+MODEL_LAYERS = {'llama': 32, 'qwen': 32, 'gemma': 42}
+
+
+def resolve_model_index(name):
+    for index, config in enumerate(load_local().get('open_weight_models', [])):
+        if config['model'] == MODEL_IDS[name]:
+            return index
+    raise ValueError(f'Model {name} is not configured in models.local.json')
+
+
+def model_grid(args, model):
+    layers, strengths = steering_grid(model)
+    custom_layers = getattr(args, 'layers', None)
+    custom_strengths = getattr(args, 'strengths', None)
+    if (custom_layers is None) != (custom_strengths is None):
+        raise ValueError('--layers and --strengths must be supplied together')
+    if custom_layers is not None:
+        import math
+        limit = MODEL_LAYERS[next(name for name, ident in MODEL_IDS.items() if ident == model)]
+        if not custom_layers or len(set(custom_layers)) != len(custom_layers) or any(l < 0 or l >= limit for l in custom_layers):
+            raise ValueError(f'Layers must be unique integers between 0 and {limit - 1}')
+        if not custom_strengths or len(set(custom_strengths)) != len(custom_strengths) or any(not math.isfinite(a) or a <= 0 for a in custom_strengths):
+            raise ValueError('Strengths must be unique positive finite numbers')
+        layers, strengths = custom_layers, custom_strengths
+    return layers, strengths
 
 
 def grid(method, layers, strengths):
@@ -93,7 +120,7 @@ def fit(backend, method, layer, data, path, sae_weights=None):
         artifact.bind(backend.model)
         return artifact
     if method == 'sae':
-        from reasoning.experiments.sae import fit_sae
+        from reasoning.sae import fit_sae
         artifact = fit_sae(backend, data, layer, sae_weights)
         artifact.save(path)
         return artifact
@@ -122,13 +149,13 @@ def run(args):
     if local['model'] not in ('meta-llama/Llama-3.1-8B-Instruct', 'Qwen/Qwen3-8B', 'google/gemma-2-9b-it'):
         raise ValueError('Unsupported model for this suite')
     split = json.loads(SPLIT.read_text())
-    datasets, audit = load_suite()
+    pair_path = prepare_pairs(local['model'], args.output)
+    datasets, audit = load_suite(pairs_path=pair_path)
     lookup = {r['id']: r for r in load()}
     dev = [lookup[i] for i in split['dev']]
-    layers, strengths = steering_grid(local['model'])
+    layers, strengths = model_grid(args, local['model'])
     grids = search_grids(args, layers, strengths)
     positions = extraction_positions(args.extraction_position)
-    pair_path = prepare_pairs(local['model'], args.output)
     if args.smoke:
         dev = dev[:2]
         datasets = {k: v[:1] for k, v in datasets.items()}
@@ -147,7 +174,7 @@ def run(args):
         sae=(dict(weights=str(args.sae_weights.resolve()), sha256=digest(args.sae_weights), layer=args.sae_layer) if 'sae' in args.methods else None),
         audit=audit, files={str(p):digest(p) for p in [pair_path,SPLIT,ROOT/'data/original.jsonl',
             ROOT/'data/benchmarks/manifest.json', ROOT/'data/benchmarks/amc2023.jsonl',
-            ROOT/'data/benchmarks/aime2024.jsonl', ROOT/'outputs/repsteer_tuning/config.json']},
+            ROOT/'data/benchmarks/aime2024.jsonl']},
         repsteer_code={str(p.relative_to(ROOT)):digest(p) for p in sorted((ROOT/'vendor/repsteer/src').rglob('*.py'))},
         torch=torch.__version__, transformers=__import__('transformers').__version__,
         code=code_hashes(), script=digest(__file__),
@@ -263,7 +290,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['run','start','status','dry-run'])
     parser.add_argument('--methods', nargs='+', choices=METHODS, default=list(DEFAULT_METHODS))
-    parser.add_argument('--model-index', type=int, default=0)
+    models = parser.add_mutually_exclusive_group()
+    models.add_argument('--model', choices=MODEL_IDS, help='Configured model family')
+    models.add_argument('--model-index', type=int, help=argparse.SUPPRESS)
+    parser.add_argument('--layers', nargs='+', type=int, help='Layer candidates; also supply --strengths')
+    parser.add_argument('--strengths', nargs='+', type=float, help='Positive strengths for CAA/PCA/LAT/Probe')
     parser.add_argument('--sae-weights', type=Path, help='Gemma Scope JumpReLU params.npz')
     parser.add_argument('--sae-layer', type=int, default=20)
     parser.add_argument('--sae-strengths', nargs='+', type=float,
@@ -273,14 +304,27 @@ def main():
     parser.add_argument('--max-tokens', type=int, default=MAX_TOKENS, help='Budget for dev selection and tests')
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--smoke', action='store_true')
-    parser.add_argument('--output', type=Path, default=ROOT/'outputs/v2/steering_suite')
+    parser.add_argument('--output', type=Path, default=None)
     add_extraction_argument(parser, allow_both=True)
     args = parser.parse_args()
+    try:
+        args.model_index = resolve_model_index(args.model) if args.model else (args.model_index if args.model_index is not None else 0)
+        if args.output is None:
+            model = open_weight_model(args.model_index)['model']
+            family = next((name for name, ident in MODEL_IDS.items() if ident == model), 'model')
+            args.output = ROOT/'outputs/v2'/f'{family}_steering'
+    except ValueError as exc:
+        parser.error(str(exc))
+    del args.model
     if min(args.max_tokens,args.batch_size) <= 0 or len(set(args.methods)) != len(args.methods):
         parser.error('Positive budgets and unique methods required')
     if args.action != 'status':
         import math
         local = open_weight_model(args.model_index)
+        try:
+            model_grid(args, local['model'])
+        except ValueError as exc:
+            parser.error(str(exc))
         if 'caa' in args.methods and 'diffmean' in args.methods:
             parser.error('caa and diffmean are aliases; choose one')
         if 'sae' in args.methods:
@@ -290,10 +334,10 @@ def main():
                 parser.error('SAE requires a local --sae-weights params.npz')
             if not 0 <= args.sae_layer < 42 or any(not math.isfinite(a) or a <= 0 for a in args.sae_strengths) or len(set(args.sae_strengths)) != len(args.sae_strengths):
                 parser.error('Invalid SAE layer or strengths')
-            from reasoning.experiments.sae import validate_weights
+            from reasoning.sae import validate_weights
             validate_weights(args.sae_weights, args.sae_layer)
         if args.action == 'dry-run':
-            layers, strengths = steering_grid(local['model'])
+            layers, strengths = model_grid(args, local['model'])
             grids = search_grids(args, layers, strengths)
             print(json.dumps(dict(model=local['model'], extraction_position=args.extraction_position,
                                   baselines=['baseline', 'cot'],

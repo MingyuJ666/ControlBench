@@ -1,415 +1,235 @@
-# Reasoning benchmark
+# Reasoning steering
 
-Compares an unsteered baseline, CoT prompting, and representation steering on LLM
-mathematical reasoning. Evaluation sets are MATH500, AMC2023, and AIME2024; generation
-and interventions use Transformers / repsteer.
+Build contrastive pairs from teacher and target-model responses to the same math problems,
+extract activations, learn steering directions, select parameters on the development set,
+and evaluate the plain baseline, CoT, and steering.
+Supported models: Llama-3.1-8B-Instruct, Qwen3-8B, and Gemma-2-9B-IT.
 
-See the [repository guide](../README.md) for how this pipeline differs from the other
-ControlBench domains.
+This guide follows **prepare positive/negative examples → configure models → run experiments**.
+If you already have the complete datasets, skip to Section 2. Reusing teacher responses
+does not require an API key. Run all commands from the repository root containing `reasoning/`.
 
-## Fresh-checkout prerequisites
+## 1. Prepare positive and negative examples
 
-The checked-in code and math JSONL files are not a complete experiment handoff.
-Before running the workflows below, supply:
+### Data and splits
 
-- A compatible Python environment and local model checkpoints. This domain does not
-  ship a complete requirements lock; the `.venv-vllm` path below describes a historical
-  environment, not one included in the repository.
-- `models.local.json` with `open_weight_models` entries containing `model`, `revision`,
-  and `local_path` for commands that use the configured model.
-- The fixed split at `outputs/archive/data/math500/steering_run/split.json`, or a
-  compatible split selected by `REASONING_SPLIT`.
-- For `evaluate` / `suite`, the audit `pairs.jsonl` beside that split and the historical
-  `outputs/repsteer_tuning/config.json`. The split override does not relocate the latter.
-- For Gemma fitting, `data/negative_gemma.jsonl`, which must be generated or supplied.
-
-These local configuration, split/audit, and Gemma-negative files are absent from this
-checkout. Obtain compatible historical artifacts for reproduction; the run does not
-reconstruct them automatically. Experiment `dry-run` commands also read their required
-configuration/data. `python -m reasoning --help` can list entry points without them.
-
-## Pipeline
-
-`prepare data → extract activations → learn directions / select features → tune on dev → test with a fixed config`
-
-The extraction, dev, and test sets are kept disjoint. Teacher and target-model answers
-form positive/negative pairs; the label indicates the source, not correctness. The default
-MATH500 split is 200/20/280; the extended Qwen pipeline uses 160/60/280. The dev set is
-used to select settings; the test set is only used to report results.
-
-## Code layout
-
-| Location | Responsibility |
+| File | Contents |
 |---|---|
-| `__main__.py`, `cli.py` | Command dispatch (`python -m reasoning <command>`) and `status` |
-| `experiments/` | Workflows: `tune`, `compare`, `evaluate`, `sample`, `reverse`, `teacher` (teacher-repair), `sae` (SAE feature learning for the suite) |
-| `datasets/` | MATH500 loading and IDs, extraction-position text truncation, model-specific pairs (`contrastive.py`), AMC/AIME download and split audit (`benchmarks.py`) |
-| `steering.py` | Learners (DiffMean / LAT / LinearProbe), activation extraction, generation-time intervention |
-| `models.py` | Transformers and teacher API adapters, chat-template prompts |
-| `evaluation.py` | Boxed-answer scoring (`math_verify`), checkpointed evaluation loop, metrics |
-| `baseline_cache.py` | Reuse of compatible unsteered completions across runs |
-| `common.py` | Paths, default split, prompts, search grids, local config, checkpoints, background workers |
-| `scripts/` | `paper_baselines.py` (the `suite` command), `qwen_pipeline.py`, `generate_negatives.py`, `aligned_endings.py`, `recheck_budget.py` |
-| `vendor/repsteer/` | Pinned upstream steering algorithms and hook implementations |
-| `tests/` | Unit checks; no GPU inference or paid API requests |
-| `data/` | Input data (see [Data](#data)) |
-| `outputs/` | Experiment artifacts; `v2/` for new runs, `archive/` for historical data |
-| `models.local.json` | Local model config and API credentials; never commit or print |
+| `data/original.jsonl` | The 500 original MATH500 problems and reference answers |
+| `data/positive.jsonl` | GPT-5.1 teacher responses in the `solution` field |
+| `data/negative_llama.jsonl` | Llama responses in the `completion` field |
+| `data/negative_qwen.jsonl` | Qwen responses in the `completion` field |
+| `data/negative_gemma.jsonl` | Gemma responses in the `completion` field |
+| `data/split.json` | Fixed IDs for 200 extraction / 20 dev / 280 test problems |
 
-Workflow changes go in `experiments/`, model calls in `models.py`, and steering methods in
-`steering.py`. Shared logic lives directly in the relevant module.
+**Positive and negative labels indicate response sources, not correctness.**
+Correct target-model responses still belong to the negative group; pairs are not filtered
+by correctness. Each response file must cover all 500 problems with unique IDs.
+All three models share the teacher responses and default split, but each uses its own
+negative file. Only the extraction set is used to learn directions; the dev set is used
+for parameter selection, and the test set for final evaluation.
 
-## Usage
+### Generate positive examples: teacher responses
 
-Run the commands below from the directory that contains `reasoning/`. You need a working
-PyTorch / Transformers environment plus local models and data. On this machine the
-interpreter is `reasoning/.venv-vllm/bin/python`; the name is historical and every entry
-point here uses Transformers, not vLLM.
+The simplest option is to reuse `reasoning/data/positive.jsonl`, without making API calls.
+To generate your own responses:
 
-- **Model**: the first entry of `open_weight_models` in `reasoning/models.local.json`
-  (`model`, `revision`, `local_path`). Only `suite` can pick another entry
-  (`--model-index`); `evaluate` can override it with `--model-path --model-id --model-revision`.
-- **Device**: every command has its own `--device` default (`cuda:2` or `cuda:3`), so the
-  `device` field in `models.local.json` is not used by the CLI. Pass `--device` explicitly.
-- **Split**: `outputs/archive/data/math500/steering_run/split.json` unless
-  `REASONING_SPLIT=/absolute/path/split.json` is set before launch.
-- **GPU wait**: runs record `waiting_for_gpu` in `status.json` and block until the device
-  has at least 24 GiB free.
+1. Read each problem from `original.jsonl` and ask the teacher model for a complete
+   solution ending with the final answer in `\boxed{}`. Generating responses with
+   GPT-5.1 requires your own API credentials.
+2. Save the teacher response verbatim as `solution`, retaining the corresponding
+   `problem` and `id`, in JSONL format. Compute IDs with
+   `reasoning.datasets.problem_id(problem)`; do not use row numbers.
+3. Once all 500 problems are complete, save the file as `reasoning/data/positive.jsonl`.
+   A different teacher or generation configuration constitutes a new data version;
+   record the actual model, prompts, and generation parameters.
+
+Each line must contain at least these fields (illustrative values only):
+
+```json
+{"id": "hash of the problem text", "problem": "original problem text", "solution": "complete teacher solution"}
+```
+
+This minimal version **does not include a teacher-response generation command**.
+Call the teacher model yourself and export the format above. Matching the schema does
+not guarantee identical responses to the existing dataset. Standard steering experiments
+only read this file and do not automatically call a teacher API.
+
+### Generate negative examples: target-model responses
+
+Prepare a CUDA-enabled PyTorch environment with Transformers, math-verify, and
+huggingface-hub. Download the model weights and tokenizer at the corresponding revision;
+the model path must be a local directory. Obtain access from the model hosting platform
+first if authorization is required.
+
+| `--family` | Model ID | Pinned revision |
+|---|---|---|
+| `llama` | `meta-llama/Llama-3.1-8B-Instruct` | `0e9e39f249a16976918f6564b8830bc894c89659` |
+| `qwen` | `Qwen/Qwen3-8B` | `b968826d9c46dd6066d109eabc6255188de91218` |
+| `gemma` | `google/gemma-2-9b-it` | `11c9b309abf73637e4b6f9a3fa1e92e615547819` |
+
+For example, generate Gemma responses on a specific GPU:
 
 ```bash
-python -m reasoning --help
+python -m reasoning.scripts.generate_negatives worker \
+  --family gemma \
+  --model-path /path/to/gemma-2-9b-it \
+  --device cuda:0 \
+  --output reasoning/outputs/v2/gemma_negatives
+```
 
-# Inspect the search grid without running a model
-python -m reasoning tune dry-run --method lat
+For another model, change `--family`, `--model-path`, and `--output` together.
+This command loads local weights, does not read `models.local.json`, and does not wait
+for an idle GPU. Choose a GPU with sufficient free memory. The script records the revision
+listed above, so ensure that your local weights match it.
 
-# Search the given layers and strengths; `start` runs in the background, `run` in the foreground
-python -m reasoning tune start --method lat \
+Generation uses greedy decoding, seed 42, batch size 2, and up to 8192 output tokens,
+limited by the model's remaining context window. Thinking is disabled for Qwen;
+Gemma receives the system instruction within the user message.
+This data-generation budget is independent of `--max-tokens` in subsequent experiments.
+
+Intermediate results and metadata are saved under `--output`. Once all responses are
+complete, they are exported to `reasoning/data/negative_<family>.jsonl`.
+Resume an interrupted run with the same command and output directory.
+Generation is skipped if the final dataset already exists and is complete. To regenerate,
+back up and move the old file first, then use a new output directory.
+Negative files include problems, reference answers, model IDs, responses, token counts,
+and scores.
+
+Alternatively, prepare all three models in the background and generate responses
+sequentially as GPUs become available:
+
+```bash
+python -m reasoning.scripts.generate_negatives start \
+  --output reasoning/outputs/v2/all_negatives
+```
+
+This mode processes all three models and may download weights over the network.
+It selects GPUs with at least 32000 MiB of free memory and utilization at or below 10%.
+Progress and logs are saved in the specified directory.
+
+## 2. Run experiments
+
+### Environment and model configuration
+
+Experiments use a CUDA GPU, PyTorch, Transformers, and the bundled `vendor/repsteer`.
+Install its declared dependencies and the answer-grading dependency:
+
+```bash
+python -m pip install -e ./reasoning/vendor/repsteer
+python -m pip install math-verify
+```
+
+Use a PyTorch CUDA build compatible with your machine. These commands do not define a
+fully locked environment; for strict reproducibility, also pin PyTorch, Transformers,
+and other software versions.
+
+Create `reasoning/models.local.json` with your local model paths. For Gemma only:
+
+```json
+{
+  "open_weight_models": [
+    {
+      "model": "google/gemma-2-9b-it",
+      "revision": "11c9b309abf73637e4b6f9a3fa1e92e615547819",
+      "local_path": "/path/to/gemma-2-9b-it"
+    }
+  ]
+}
+```
+
+Add entries for other models using the table above; `--model` selects the configuration
+by model ID. **No API key is required.** This file is ignored by Git; do not commit
+private credentials.
+
+### Configuration check and smoke run
+
+Inspect the model and search space without loading weights:
+
+```bash
+python -m reasoning dry-run --model gemma --methods lat
+```
+
+A `dry-run` does not validate the full datasets or GPU environment.
+For a first run, use a small smoke check:
+
+```bash
+python -m reasoning run --model gemma --methods lat --smoke \
+  --max-tokens 128 --device cuda:0 \
+  --output reasoning/outputs/v2/gemma_smoke
+```
+
+The smoke run still requires complete input datasets and loads the model, but reduces
+the search and evaluation sizes. Do not use its results for formal reporting.
+
+### Full run
+
+```bash
+python -m reasoning run --model gemma --methods lat \
   --layers 14 20 26 32 --strengths 0.5 1 1.5 2 2.5 3 \
-  --device cuda:0 --output reasoning/outputs/v2/lat_run
+  --max-tokens 2048 --device cuda:0 \
+  --output reasoning/outputs/v2/gemma_lat
+```
 
-# Test with the vector and settings selected on dev
-python -m reasoning evaluate start \
-  --tuning-dirs reasoning/outputs/v2/lat_run \
-  --device cuda:0 --output reasoning/outputs/v2/lat_eval
+The pipeline builds `pairs.jsonl` for the selected model, extracts activations, learns
+directions, and selects layers and strengths on dev. It then evaluates on the 280
+MATH500 test problems, 40 AMC2023 problems, and 30 AIME2024 problems.
+The plain baseline, CoT, and steering are evaluated in one run, without depending on
+historical experiment outputs.
 
-# Unsteered baseline
-python -m reasoning evaluate start --baseline-only \
-  --device cuda:0 --output reasoning/outputs/v2/baseline
+Run multiple methods together, or launch in the background:
 
+```bash
+python -m reasoning start --model llama --methods caa pca lat probe iti \
+  --device cuda:0 --output reasoning/outputs/v2/llama_all
 python -m reasoning status
 ```
 
-## Entry points and tuning
+### Common options
 
-| Entry point | Actions | What it does |
-|---|---|---|
-| `tune` | `start` `run` `status` `dry-run` | DiffMean / LAT / LinearProbe; layer × strength search on dev in two stages |
-| `compare` | `start` `run` `status` | DiffMean / LAT / LinearProbe at one layer (default 16, alphas `-1,0.5,1.5`) on up to 20 dev problems; use `tune` for full search |
-| `suite` | `start` `run` `status` `dry-run` | CAA/DiffMean, PCA, LAT, Probe, ITI, SAE; joint search on the full dev set, then test |
-| `evaluate` | `start` `run` `status` `dry-run` | Fixed vectors on MATH500 / AMC / AIME, baseline, CoT baseline |
-| `sample` | none (runs in the foreground) | Baseline vs. steering on the first test problem; needs a fresh `--output` |
-| `reverse` | `start` `run` `status` | Fixed historical DiffMean L16, α = −1 on the 280 test problems at 8192 tokens, with a direction/sign audit |
-| `teacher-repair` | none (`--dry-run` only checks) | Retry missing teacher exports once via the API |
-| `status` | none | Summarize `status.json` of runs directly under `outputs/` and `outputs/v2/` |
-
-**`tune` stages.** Screen: every grid candidate plus a baseline on the first 8 dev problems.
-Confirm: the top 3 screen candidates (ties: smaller |α|, then label) plus a baseline on the
-remaining dev problems. Both stages use the same budget (see [Generation budget](#generation-budget)). `selected_steering.json` is the best
-steering candidate on confirmation, `selected.json` is the best condition including the
-baseline. `--eval-limit N` additionally evaluates baseline and the selected candidate on a
-fixed seed-42 sample of N test problems. `--smoke` keeps two candidates and 2 + 2 dev
-problems at 32 tokens. All tune candidates use the decode phase (Add on generated tokens).
-
-**`evaluate` conditions.** With `--tuning-dirs`, each directory must be a completed `tune`
-run (`config.json` + `selected_steering.json`), one per method; suite outputs are not
-accepted. Without `--tuning-dirs` and without `--baseline-only`, it uses the historical
-hard-coded vectors in `experiments/evaluate.py::CONDITIONS` (DiffMean L24 α 0.5, LAT L16
-α 0.5). `--datasets` selects a subset of `math500 amc2023 aime2024`. A tune directory whose
-recorded `confirmation_budget` differs from `--max-tokens` is rejected, so a setting is
-never tested at a budget other than the one it was selected at. `evaluate` and `suite` both audit the split against the historical
-`outputs/repsteer_tuning/config.json`, which must exist.
-
-In the suite, CAA maps to DiffMean (pass one of `caa` or `diffmean`, not both). SAE uses
-Gemma Scope JumpReLU weights and currently supports Gemma-2-9B only.
-
-| What to change | Flag or code location |
+| Option | Meaning |
 |---|---|
-| Layer and strength search range | `tune --layers ... --strengths ...` (must be given together) |
-| Default search grid | `LAYER_GRID`, `STRENGTH_GRID` in `common.py` |
-| Single-layer comparison | `compare --layer 20 --alphas=0.5,1,1.5` |
-| ITI strength / number of heads | `STRENGTH_GRID_FOR_ITI` / `fit(top_k=48)` in `scripts/paper_baselines.py` |
-| Method-internal parameters | `steering.py::learner`; PCA/ITI in `scripts/paper_baselines.py::fit` |
-| Activation extraction position | `--extraction-position before_answer\|after_answer`; `tune` / `suite` also support `both` |
-| Intervention position and phase | `steering.py::generate`, the suite's `control_plan`; always decode / generated tokens as launched from the CLI |
-| GPU / generation batch size | `--device` / `--batch-size` (default 4) |
-| Generation length | `MAX_TOKENS` in `common.py`, or `--max-tokens` on `tune` / `suite` / `evaluate` / `compare` / `sample` (see below) |
-| Chat-template thinking | `evaluate --thinking default\|enabled\|disabled`; `suite` and the Qwen pipeline disable Qwen thinking automatically; other entry points use the template default |
-| Prompts | `SYSTEM`, `SUFFIX`, `COT_SUFFIX` in `common.py` |
-| Data split | `REASONING_SPLIT=/absolute/path/split.json`, set before launch |
+| `--model` | `llama`, `qwen`, or `gemma`; configure the model first |
+| `--methods` | Defaults to `caa pca lat probe iti`; `diffmean` is an alias for `caa` |
+| `--layers` / `--strengths` | Supply both to customize the layer and strength search grid |
+| `--extraction-position` | `before_answer` (default), `after_answer`, or `both` |
+| `--max-tokens` | Shared dev/test generation budget; currently defaults to 2048 |
+| `--device` / `--batch-size` | Defaults to `cuda:2` / `4` |
+| `--output` | Results and checkpoints; use a new directory when changing settings |
 
-### Generation budget
+Layer indices start at 0. Default candidate layers are
+`[8,11,14,17,20,23,26]` for Llama, `[9,12,15,18,21,24,27]` for Qwen, and
+`[14,20,26,32]` for Gemma. Default strengths are `[0.5,1,1.5,2,2.5,3]`.
+ITI selects 48 heads and uses its own strengths `[1,5,10,15,20]`.
+SAE supports Gemma only: specify `--methods sae` and
+`--sae-weights /path/to/params.npz`, with `--sae-layer` and `--sae-strengths`
+to configure its parameters.
 
-Every stage uses one budget: `MAX_TOKENS` in `common.py` (currently 2048). It is the default
-`--max-tokens` of `tune` (screen and confirmation), `suite` (dev selection and tests),
-`evaluate`, `compare`, and `sample`, and the Qwen pipeline passes it to the suite. Change it
-there once rather than per command; passing `--max-tokens` overrides it for one run and is
-recorded in that run's config. `tune --smoke` uses 32 tokens. Two entry points keep their
-own budget on purpose: `reverse` replays a historical setting at 8192, and
-`scripts/recheck_budget.py` exists to re-test a selection at a different budget.
+`before_answer` extracts before the line containing the final boxed answer;
+`after_answer` extracts at the end of the complete response.
+`both` searches over both positions jointly. Pairs may be excluded if they lack the
+required answer boundary, contain empty text, or exceed the length limit.
+The IDs actually used are recorded in the outputs.
 
-Gemma has no system role, so its system prompt is prepended to the user message, and its
-generation budget is capped at the remaining context window.
+The default split is `data/split.json`. Set
+`REASONING_SPLIT=/absolute/path/split.json` to use another supported split
+(200/20/280 or 160/60/280). The code checks that the sets are disjoint, cover all problems,
+and that the actual pairs belong to the extraction set.
+After changing the split or examples, relearn directions and retune in a new directory.
 
-### Search grids
+### Results and resuming
 
-Layers are 0-based block indices: `resid_post(20)` is the output of the 21st block. `tune`
-and `suite` pick the grid from the model ID:
-
-| Model | Layers |
+| Output | Contents |
 |---|---|
-| Qwen3-8B | 9, 12, 15, 18, 21, 24, 27 |
-| Gemma-2-9B | 14, 20, 26, 32 |
-| Llama-3.1-8B | 8, 11, 14, 17, 20, 23, 26 |
+| `report.md` / `results.json` | Summary results |
+| `<method>_selected.json` | Configuration selected on dev |
+| `artifacts/` | Learned directions or features |
+| `pairs.jsonl` / `extraction*.json` | Pair snapshot and actual extraction problems |
+| `*.jsonl` | Per-problem responses |
+| `status.json` / `run.log` | Progress / background logs |
 
-All models use strengths `[0.5, 1, 1.5, 2, 2.5, 3]`, giving 42 candidates for Qwen/Llama
-and 24 for Gemma (doubled with `--extraction-position both`). DiffMean, LAT, LinearProbe,
-PCA, and CAA share this grid. ITI selects 48 heads instead of a layer and uses its own
-strength grid `[1, 5, 10, 15, 20]`. SAE uses `--sae-layer` and `--sae-strengths`
-(default `0.1 0.25 0.5 0.75 1 1.5 2 3 5 10 20 40`).
-
-```bash
-python -m reasoning tune start --method lat --device cuda:6 --output reasoning/outputs/v2/lat_grid
-python -m reasoning tune start --method probe --device cuda:1 --output reasoning/outputs/v2/probe_grid
-# Evaluate the layer, strength, and vector each run selected on dev
-python -m reasoning evaluate start --tuning-dirs reasoning/outputs/v2/lat_grid reasoning/outputs/v2/probe_grid \
-  --device cuda:6 --output reasoning/outputs/v2/steering_grid_eval
-```
-
-### Activation extraction position
-
-`tune`, `compare`, `sample`, `suite`, and the Qwen pipeline support
-`--extraction-position`, set independently of the layer (only `tune` and `suite` accept
-`both`):
-
-- `before_answer` (default): find the last `\boxed{`, drop that whole line and everything
-  after it, strip trailing whitespace, and extract at the last non-padding token of the
-  remaining text. Pairs with no boxed answer or empty text after truncation are excluded.
-- `after_answer`: keep the full response (including the final answer and anything after
-  it), strip trailing whitespace, and extract at the last token. No boxed answer is
-  required; empty responses are still excluded. This extracts at the end of the full
-  response rather than at the closing brace of the boxed answer.
-
-Both modes keep the same length limit (see [Data](#data)). Extraction position and the
-generation-time intervention phase are separate settings. The position is recorded in the
-run config and vector metadata, and a saved vector with a different or missing position is
-rejected, so switching positions requires a new `--output`.
-
-Before- and after-answer positions can be searched jointly in a single `tune` job:
-
-```bash
-python -m reasoning tune dry-run --method lat --extraction-position both
-python -m reasoning tune start --method lat --extraction-position both --device cuda:0 --output reasoning/outputs/v2/lat_both
-python -m reasoning evaluate start --tuning-dirs reasoning/outputs/v2/lat_both --device cuda:0 --output reasoning/outputs/v2/lat_both_eval
-```
-
-One process loads the model once, learns vectors for both positions in turn, and jointly
-searches over position × layer × strength. The screen stage ranks candidates from both
-positions together and sends the top three to confirmation; a single config is then chosen
-on dev. All stages share one baseline. This is a sequential single-process run, not
-dual-GPU parallelism or a sum of the two positions' vectors. Vectors are stored under
-`artifacts/<position>/L<layer>` (single-position runs: `artifacts/L<layer>`), condition
-labels are prefixed by position, and `selected_steering.json` records the chosen position,
-which `evaluate --tuning-dirs` reads automatically. Because empty text or the length limit
-can drop different pairs per position, the kept pair IDs are written to
-`extraction_<position>.json` (single-position runs: `extraction.json`).
-
-### Suite
-
-`suite` accepts Llama-3.1-8B-Instruct, Qwen3-8B, and Gemma-2-9B-IT. It first runs the plain
-and CoT baselines on each test set and on dev, then for each method learns vectors, scores
-every candidate on the full dev set, and selects the best one (most correct; ties: smaller
-α, then lower layer). A steering candidate is always selected and tested on MATH500,
-AMC2023, and AIME2024, even when it does not beat the baseline. Baselines are not repeated
-per extraction position.
-
-```bash
-python -m reasoning suite dry-run --methods caa pca lat probe iti --extraction-position both
-python -m reasoning suite start --methods caa pca lat probe iti --extraction-position both --device cuda:0 --output reasoning/outputs/v2/suite_both
-```
-
-To include SAE, use `--methods caa pca lat probe iti sae` and pass
-`--model-index <index of Gemma in open_weight_models>` and
-`--sae-weights /path/to/layer_20/.../params.npz`. `--sae-layer` defaults to 20; if the
-weight path contains `layer_<N>`, it must match. SAE is not in the default method list.
-
-Outputs: vectors under `artifacts/<method>/L<layer>` (`artifacts/<method>/<position>/L<layer>`
-with `both`), per-candidate dev files `dev_<method>_<label>.jsonl`, `<method>_dev.json`,
-`<method>_selected.json`, per-test files `<dataset>_<method>.jsonl`, and `results.json` /
-`report.md`. No separate `evaluate` call is needed. Other flags: `--smoke` (one candidate,
-2 dev and 1 test problem per set, 8 pairs), `--wait-pid PID` (queue behind another process;
-the run refuses to start if the source changed while queued). `python -m
-reasoning.scripts.paper_baselines` is the same entry point.
-
-### CoT baseline
-
-The steering baseline runs Transformers/repsteer with interventions off; its prompt already
-asks: `Give a clear mathematical solution. End with the final answer in \boxed{}.`
-The CoT baseline prepends `Let's think step by step.` to the same instruction as a separate,
-unsteered prompt control. Model, problem set, generation budget, batch size, and scoring
-are identical, so it measures the gain from the added prompt alone.
-
-```bash
-# Check the config only
-python -m reasoning evaluate dry-run --baseline-only --cot-baseline --max-tokens 2048 --batch-size 16
-# Run the plain and CoT baselines once each (350 problems)
-python -m reasoning evaluate start --baseline-only --cot-baseline --max-tokens 2048 --batch-size 16 \
-  --device cuda:6 --output reasoning/outputs/v2/cot_baseline_2048
-```
-
-In `evaluate`, `--cot-baseline` adds the CoT condition; to run it alongside tuned vectors,
-drop `--baseline-only` and pass `--tuning-dirs` (`--baseline-only` cannot be combined with
-`--methods` or `--tuning-dirs`). `--cot-only` runs only the CoT condition; gains and losses
-are then reported as `—` and must be compared by ID against an existing baseline with the
-same settings. `suite` always runs both baselines.
-
-Per-problem files:
-
-| | Plain baseline | CoT baseline |
-|---|---|---|
-| `evaluate` | `<dataset>_baseline_baseline.jsonl` | `<dataset>_cot_baseline.jsonl` |
-| `suite` (test) | `<dataset>_baseline.jsonl` | `<dataset>_cot_baseline.jsonl` |
-| `suite` (dev) | `dev_baseline.jsonl` | `dev_cot_baseline.jsonl` |
-
-They are labeled `baseline` and `cot` in reports. The prompt is saved in the run config and
-checkpoint metadata, and baseline reuse is keyed by prompt; changing the prompt or code
-requires a new output directory.
-
-### Baseline reuse
-
-The unsteered conditions of `evaluate`, `tune`, `suite`, and `recheck_budget` look for
-existing completions in `*baseline*.jsonl` files directly under `outputs/` and `outputs/v2/`
-or one directory below them, plus `data/negative_llama.jsonl` (below). Every other source
-needs a `.meta.json` next to it. A source is used only if
-its metadata matches on model, revision, backend, system prompt, prompt suffix, generation
-budget, batch size, seed, thinking setting, Gemma prompt/budget policy, and greedy decoding.
-Rows are aligned by problem ID, problem text, and reference answer, and reused completions
-are re-scored with the current scorer. Only missing problems are generated. When
-everything hits, `evaluate --baseline-only` loads no model and does not wait for a GPU.
-`compare` does not reuse baselines.
-
-`data/negative_llama.jsonl` has no metadata file; it is accepted only if it matches the
-original `outputs/llama31_8b_vllm_math500_8192.jsonl`, whose metadata records the vLLM
-backend, so it never matches a Transformers run. Files without metadata or with mismatched
-settings are skipped. Each reused row's `baseline_source` records the source path, SHA256,
-metadata SHA256, and settings; `Reused` in the evaluate report is the number of reused
-problems.
-
-## Data
-
-### Positive/negative pairs
-
-- `data/original.jsonl`: original MATH500, 500 problems, byte-identical to the source.
-- `data/positive.jsonl`: GPT-5.1 teacher solutions (`solution` field), 500 problems.
-- `data/negative_llama.jsonl`: historical Llama-3.1-8B-Instruct vLLM solutions, 500 entries,
-  kept for baseline reuse and reverse validation of old vectors. `data/negative.jsonl` is a
-  compatibility symlink to it.
-- `data/negative_gemma.jsonl`: expected Gemma-2-9B-IT solutions, 500 entries;
-  not included in this checkout.
-- `data/negative_qwen.jsonl`: Qwen3-8B solutions with thinking disabled, 500 entries.
-
-The negative files are produced by `python -m reasoning.scripts.generate_negatives`:
-`start` downloads the pinned revisions of all three models and generates each on the first
-GPU with at least 32000 MiB free and at most 10% utilization; `worker --family
-llama|gemma|qwen --model-path ... --device ... --output ...` generates one model directly.
-Checkpoints, their `.meta.json`, and `summary.json` stay in the run's `--output`; only the
-finished file is copied to `data/negative_<family>.jsonl`. If that file already exists with
-all 500 problems from the right model, the worker skips generation; otherwise it refuses and
-the old file must be moved away first.
-
-Positive/negative denotes the source group for steering, not whether each answer is correct;
-existing fields such as `correct` are kept, and the teacher's historical `negative` label is
-stored in `source_label`. `tune`, `compare`, `sample`, and `suite` build pairs from
-`positive.jsonl` and the negative file for the configured model. Both files must cover all
-500 problems and every negative row must have a `model` field equal to the configured model;
-otherwise the run is rejected, with no fallback.
-
-Pairs use every problem in the extraction split (200, or 160 for the Qwen split), not
-filtered by correctness. Pairs longer than min(16384, model context) tokens are dropped, so
-the actual count can be lower (at least 8 are required). Each run snapshots its pairs to
-`pairs.jsonl` + `.meta.json` in the output directory and refuses to resume if the sources
-changed; after any data change, relearn vectors and retune in a new output directory.
-
-The archived pairs next to the default split (`outputs/archive/data/math500/steering_run/
-pairs.jsonl`, the old 56-problem subset) are still read by `reverse`, by `aligned_endings`,
-and by the split audit in `evaluate` / `suite`. Historical API responses, splits, vectors,
-and logs live in `outputs/archive/data/math500/`.
-
-`teacher-repair` reads `outputs/archive/data/math500/gpt51_teacher` and `data/positive.jsonl`,
-retries missing problems once with 65536 output tokens, and writes `positive.merged.jsonl`
-in its `--output` (default `outputs/v2/teacher_repair`). It never modifies
-`data/positive.jsonl`. Credentials come from `models.local.json` or `OPENAI_API_KEY` /
-`OPENAI_BASE_URL`; `--prompt-key` reads a key from the terminal.
-
-### AMC / AIME
-
-Loading code is in `datasets/`; data is in `data/benchmarks/`. On first use run:
-
-```bash
-python -m reasoning.datasets.benchmarks
-```
-
-This downloads pinned Hugging Face revisions of AMC 2023 (40 problems, AMC 12A/B) and
-AIME 2024 (30 problems, I and II) and saves JSONL, the raw Parquet, and a `manifest.json`
-with checksums. If a manifest already exists, it verifies the local data instead. These two
-sets are test-only, and exact problem overlap with MATH500 is rejected.
-
-### Qwen extended dev set
-
-```bash
-python -m reasoning.scripts.qwen_pipeline start --output <new output dir> --device cuda:N
-```
-
-It derives a 160/60/280 split from the default one: the original 20 dev problems plus the
-last 40 extraction problems (in their fixed order) become dev; test IDs and order are
-unchanged. It writes `data/qwen/split.json` and `data/qwen/pairs.jsonl` (not present until
-the pipeline runs), then:
-
-1. waits for `--wait-pid` to exit (the default is a fixed historical PID; pass your own) and
-   for the GPU to have at least 32000 MiB free and at most 10% utilization;
-2. runs `generate_negatives` for Qwen (skipped when `data/negative_qwen.jsonl` is complete);
-3. runs the suite (`caa pca lat probe iti`, `MAX_TOKENS` for dev and test, batch size 4) in
-   `<output>/suite` with `REASONING_SPLIT` set to the Qwen split.
-
-Other entry points can use the same split via
-`REASONING_SPLIT=<absolute path>/reasoning/data/qwen/split.json`. Changing the split
-requires re-extraction and retuning in a new output directory.
-
-## Other scripts
-
-| Script | Purpose |
-|---|---|
-| `scripts/recheck_budget.py` | Re-run a completed tune selection on its same test IDs at a new `--max-tokens` (default 4096); `--source <tune dir>` |
-| `scripts/aligned_endings.py` | Ablation of the pair ending (reasoning prefix without trailing display delimiters) for a fixed DiffMean tune selection; `prepare` previews the alignment |
-
-## Results, verification, and commits
-
-Use a separate `--output` for each experiment; new runs go under `outputs/v2/` and store the
-config, artifacts, per-problem JSONL, reports, `status.json`, and `run.log` (background
-runs). Resuming requires identical config, including input file hashes and hashes of the
-top-level, `datasets/`, and `experiments/` source files (`suite` also hashes its own script);
-otherwise the run is refused. After any change, use a new output directory and do not
-modify the source of a running job. One worker per output directory is enforced by a lock.
-
-Old scripts, including the old vLLM `baseline` command, have been removed; use
-`evaluate start --baseline-only` for the plain baseline. Historical data and results remain
-in `outputs/`; the commands in `outputs/archive/data/math500/RUN_INFO.md` are records only,
-and some `outputs/v2/*/launch.py` files record how individual runs were launched.
-
-```bash
-python -m unittest discover -s reasoning/tests -v
-```
-
-Commit source, docs, tests, and vendored dependencies, keeping upstream licenses.
-Do not commit `models.local.json`, virtual environments, or `outputs/`; they are excluded
-in `.gitignore`. Full reproduction also requires the data and the fixed split; inputs in
-historical outputs are not migrated with the code.
+Resume with the same configuration and output directory.
+Resuming is rejected if input or code hashes have changed.
+AMC/AIME data live in `data/benchmarks/`. To download them initially, run
+`python -m reasoning.datasets.benchmarks`; this download step also requires
+`pyarrow` and network access.

@@ -14,8 +14,7 @@ DATA = ROOT / 'data'
 OUTPUTS = ROOT / 'outputs'
 NEW_OUTPUTS = OUTPUTS / 'v2'
 LOCAL_CONFIG = ROOT / 'models.local.json'
-SPLIT = Path(os.environ.get('REASONING_SPLIT', ROOT / 'outputs/archive/data/math500/steering_run/split.json')).resolve()
-PAIRS = SPLIT.with_name('pairs.jsonl')
+SPLIT = Path(os.environ.get('REASONING_SPLIT', DATA / 'split.json')).resolve()
 
 
 # User-defined search space; layer numbers are zero-based model block indices.
@@ -193,7 +192,7 @@ def dispatch(args, run, module):
 def code_hashes():
     """Hash maintained code only; exclude credentials, data and frozen sources."""
     paths = list(ROOT.glob('*.py'))
-    paths += [p for name in ('datasets', 'experiments') for p in (ROOT / name).glob('*.py')]
+    paths += list((ROOT / 'datasets').glob('*.py'))
     return {str(p.relative_to(ROOT)): digest(p) for p in sorted(paths)}
 
 
