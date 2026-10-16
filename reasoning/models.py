@@ -1,16 +1,6 @@
 """Model adapters; heavy dependencies load only when requested."""
 from reasoning.common import SYSTEM, SUFFIX
 
-class TeacherClient:
-    def __init__(self, api_key, base_url, timeout=900, max_retries=0):
-        from openai import OpenAI
-        self._client = OpenAI(api_key=api_key,base_url=base_url,
-                              timeout=timeout,max_retries=max_retries)
-
-    def generate(self, *, model, instructions, input, reasoning, max_output_tokens):
-        return self._client.responses.create(model=model,instructions=instructions,
-            input=input,reasoning=reasoning,max_output_tokens=max_output_tokens)
-
 
 class TransformersLLM:
     def __init__(self, model_path, device='cuda:2', enable_thinking=None):

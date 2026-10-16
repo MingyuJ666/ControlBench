@@ -4,7 +4,6 @@ import sys
 import torch
 from contextlib import nullcontext
 from dataclasses import replace
-from pathlib import Path
 from reasoning.common import ROOT, MAX_TOKENS, SUFFIX, open_weight_model, read_jsonl
 from reasoning.models import TransformersLLM
 from reasoning.datasets import extraction_text, EXTRACTION_POSITIONS
@@ -28,9 +27,6 @@ def learner(method, layer=16):
     if method == 'probe':
         return rs.learners.LinearProbe(l2=0.1, max_iter=25, **common)
     raise ValueError(f'Unknown method: {method}')
-
-def vector(artifact):
-    return artifact.direction if hasattr(artifact, 'direction') else artifact.weight
 
 
 def strip_generation(tokens, stop_ids, budget):
@@ -76,20 +72,6 @@ class RepSteerBackend:
             raise ValueError('Need at least 8 valid pairs')
         return rs.data.ContrastivePairs.from_records(records), [r['id'] for r in records]
 
-    def fit(self, method, data, output):
-        output = Path(output)
-        if output.exists():
-            artifact = rs.load_artifact(output)
-            self.check_extraction_position(artifact)
-            artifact.bind(self.model)
-        else:
-            artifact = learner(method, self.layer).fit(self.model, data, store=self.store)
-            direction = vector(artifact)
-            if not torch.isfinite(direction).all() or not torch.isclose(direction.norm(), torch.tensor(1.), atol=1e-4):
-                raise ValueError('Expected finite unit-norm direction')
-            artifact = self.tag_extraction_position(artifact)
-            artifact.save(output)
-        return artifact
 
     def tag_extraction_position(self, artifact):
         return replace(artifact, metadata=artifact.metadata.with_updates(config={
@@ -132,21 +114,3 @@ class RepSteerBackend:
                                tokens=len(tokens), truncated=truncated,
                                max_new_tokens=max_tokens, requested_max_new_tokens=requested_budget))
         return values
-
-
-def generate(backend, questions, artifact, candidate, budget):
-    if candidate is None:
-        return backend.generate(questions,max_tokens=budget)
-    controls = [rs.Intervention(artifact=artifact,operator=rs.operators.Add(),
-                positions=rs.positions.GeneratedTokens(),
-                strength=rs.schedules.Constant(candidate['alpha']),phase='decode')]
-    if candidate['phase'] == 'both':
-        controls.append(rs.Intervention(artifact=artifact,operator=rs.operators.Add(),
-            positions=rs.positions.LastPromptToken(),
-            strength=rs.schedules.Constant(candidate['alpha']),phase='prefill'))
-    # alpha=0 below suppresses only the backend's own optional hook; this outer
-    # repsteer plan remains active during its model.generate call.
-    with backend.model.steer(rs.SteeringPlan(controls)):
-        return backend.generate(questions,max_tokens=budget)
-
-

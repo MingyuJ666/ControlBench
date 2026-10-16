@@ -63,15 +63,6 @@ def open_weight_model(index=0):
         raise ValueError('No configured open-weight model at this index')
     return dict(models[index])
 
-def api_credentials(default_base_url=None):
-    api = load_local().get('api', {})
-    keys, index = api.get('api_keys', []), api.get('active_key_index', 0)
-    if keys and (not isinstance(index, int) or not 0 <= index < len(keys)):
-        raise ValueError('Invalid active_key_index in local configuration')
-    key = os.environ.get('OPENAI_API_KEY') or (keys[index] if keys else None)
-    base_url = os.environ.get('OPENAI_BASE_URL') or api.get('base_url') or default_base_url
-    return key, base_url
-
 
 def read_jsonl(path):
     with Path(path).open(encoding='utf-8') as f:
