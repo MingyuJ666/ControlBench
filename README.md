@@ -3,7 +3,7 @@
 <h3 align="center">Evaluating behavioral control and task performance across five domains of LLMs and agents.</h3>
 
 <p align="center">
-  <a href="https://github.com/MingyuJ666/ControlBench">Code</a>
+  <a href="https://github.com/MingyuJ666/ControlBench">Code</a> · <a href="https://huggingface.co/datasets/Mingyu111/controlbench">🤗 Hugging Face Dataset</a>
 </p>
 
 ## ❗ Abstract
