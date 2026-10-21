@@ -20,7 +20,7 @@ does not require an API key. Run all commands from the repository root containin
 | `data/negative_llama.jsonl` | Llama responses in the `completion` field |
 | `data/negative_qwen.jsonl` | Qwen responses in the `completion` field |
 | `data/negative_gemma.jsonl` | Gemma responses in the `completion` field |
-| `data/split.json` | Fixed IDs for 200 extraction / 20 dev / 280 test problems |
+| `data/split.json` | Fixed IDs for 160 extraction / 60 dev / 280 test problems |
 
 **Positive and negative labels indicate response sources, not correctness.**
 Correct target-model responses still belong to the negative group; pairs are not filtered
@@ -211,7 +211,9 @@ to configure its parameters.
 required answer boundary, contain empty text, or exceed the length limit.
 The IDs actually used are recorded in the outputs.
 
-The default split is `data/split.json`. Set
+The default split is `data/split.json` (160 extraction / 60 dev / 280 test).
+It retains the original 280 test IDs and 20 dev IDs, moving the last 40 IDs
+from the original extraction list into dev. Set
 `REASONING_SPLIT=/absolute/path/split.json` to use another supported split
 (200/20/280 or 160/60/280). The code checks that the sets are disjoint, cover all problems,
 and that the actual pairs belong to the extraction set.
