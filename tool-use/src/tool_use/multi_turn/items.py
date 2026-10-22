@@ -15,15 +15,18 @@ multi_turn categories. A row is one conversation:
                   correction is recorded in inputs/multi_turn_corrections.json
 
 The file is frozen and its sha256 and provenance are in inputs/MANIFEST.json.
+multi_turn_split.json selects 300 dev / 300 test conversations, grouping related
+scenario variants together. Full evaluation remains the default.
 
     python -m core.domains.tool_use.multi_turn.items
 """
 
 import json
 
-from ..schema import INPUTS, TARGETS
+from ..schema import EVAL_SPLIT, EVAL_SPLITS, INPUTS, TARGETS
 
 MULTI_TURN = INPUTS / "multi_turn.jsonl"
+SPLIT = INPUTS / "multi_turn_split.json"
 
 
 def load_items() -> list[dict]:
@@ -45,11 +48,18 @@ def load_items() -> list[dict]:
     return rows
 
 
-def eval_items(target: str) -> list[dict]:
-    """The conversations of one target, in file order."""
+def eval_items(target: str, split: str = EVAL_SPLIT) -> list[dict]:
+    """The selected conversations of one target, in original file order."""
     if target not in TARGETS:
         raise ValueError(f"target must be one of {TARGETS}, got {target!r}")
-    return [row for row in load_items() if row["target"] == target]
+    if split not in EVAL_SPLITS:
+        raise ValueError(f"choose an evaluation split from {EVAL_SPLITS}, got {split!r}")
+    rows = load_items()
+    if split == "full":
+        return [row for row in rows if row["target"] == target]
+    from .splits import load_split
+    selected = load_split(rows, SPLIT, MULTI_TURN)[split]
+    return [row for row in rows if row["target"] == target and row["item_id"] in selected]
 
 
 def main() -> None:

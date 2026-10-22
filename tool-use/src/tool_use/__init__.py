@@ -40,7 +40,7 @@ from ...runtime.search import read_jsonl, write_json, write_jsonl
 from .pairs import extraction_pairs
 from .prompting import prompted_items                                      # noqa: F401  domain hook
 from .render import PROMPT_VERSION, item_messages, pair_messages, render_chat
-from .schema import EVAL_SPLIT, INPUTS, NAME, TARGETS
+from .schema import EVAL_SPLIT, EVAL_SPLITS, INPUTS, NAME, TARGETS
 from .single_turn import (build_records, eval_items, judging_complete as _complete,
                           load_verdicts, merge, next_turn, prepare_shards, summarize)
 
@@ -73,13 +73,8 @@ def render(tokenizer, item: dict) -> str:
 
 
 def items(target: str, split: str = EVAL_SPLIT) -> list[dict]:
-    """Every evaluation item of this target.
-
-    `split` is accepted and ignored. Each configuration is evaluated on the
-    whole set and reported on its own, so there is no development half to
-    select on and no held-out half to confirm on.
-    """
-    return eval_items(target)
+    """Evaluation items of this target in the full pool or its fixed dev/test split."""
+    return eval_items(target, split)
 
 
 def clean(text: str) -> str:

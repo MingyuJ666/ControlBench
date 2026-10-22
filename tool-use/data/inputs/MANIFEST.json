@@ -51,7 +51,7 @@
     "row": {
       "item_id": "When2Call's uuid, prefixed w2c_",
       "target": "the action the situation calls for: call, clarify or abstain",
-      "split": "which side of the original 50/50 division this item fell on; recorded, not used",
+      "split": "dev or test in the fixed original lineage-level partition; selected by --eval-split",
       "lineage": "the upstream scenario this item was derived from; sibling items share it, which is what the division was drawn over",
       "tools": "the tool list offered",
       "messages": "the conversation, ending on the user's request",
@@ -67,7 +67,7 @@
       "clarify": 873,
       "abstain": 1010
     },
-    "evaluation": "One set. Every configuration is evaluated on all of it and reported on its own, so nothing is held out and the three targets need not be equal in size: each is measured separately, and its count decides only the width of its own interval. Call items have no follow-up; they are complete at the decision.",
+    "evaluation": "Use --eval-split full (default), dev for validation, or test for held-out evaluation. Full uses all 3,109 items; dev uses 1,549 and test uses 1,560. Call items have no follow-up; they are complete at the decision.",
     "recorded_division": {
       "seed": 20260708,
       "unit": "lineage, drawn whole 50/50",
@@ -85,7 +85,7 @@
           "test": 504
         }
       },
-      "note": "Each row's `split` records this division, which the current experiment does not use. It was drawn over source scenarios rather than items: When2Call derived its call, clarify and abstain variants from the same upstream scenarios, so an item-level division would put one variant on each side. An experiment that wants to select on one half can use it without rebuilding anything."
+      "note": "Used by --eval-split dev/test. The division is drawn over source scenarios rather than items so related call, clarify and abstain variants stay together. Full evaluation remains available and is the default."
     },
     "construction": "3,652 mcq rows -> 3,109 items. The answer options are removed so the model writes a free-form reply, and the result is audited by hand: 1,295 -> 1,226 call, 1,062 -> 873 clarify, 1,295 -> 1,010 abstain. The audit decisions are judgements on individual items and are not reproducible from a rule."
   },
@@ -166,6 +166,27 @@
       "sha256": "00c410ce845f858da058ca0ae56aff8f3239d99daef6ca5783a9e26a5e916216",
       "count": 1,
       "date": "2026-09-16"
+    },
+    "split": {
+      "file": "multi_turn_split.json",
+      "seed": 20261022,
+      "unit": "Keep all BFCL category variants of a scenario together, and merge scenarios sharing a whitespace-normalized initial user request.",
+      "source_sha256": "5df4ad11417ab671193ae8c50a7a92fea4471b1b3703c00a0cecacbe151f3f81",
+      "sizes": {
+        "dev": {
+          "call": 100,
+          "clarify": 100,
+          "abstain": 100
+        },
+        "test": {
+          "call": 100,
+          "clarify": 100,
+          "abstain": 100
+        }
+      },
+      "created_on": "2026-10-22",
+      "note": "Use --eval-split full (default), dev, or test. Original conversation rows and extraction pairs are unchanged. Rebuild with python tool-use/scripts/make_multi_turn_split.py.",
+      "sha256": "66323bc831d3adb531d6ce3b98e1961eeb8ac05c966cc15ecb5b347efc7f35fe"
     }
   }
 }

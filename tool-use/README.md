@@ -37,8 +37,42 @@ stateful BFCL backends, and their results enter the conversation.
 
 [MANIFEST.json](data/inputs/MANIFEST.json) records sources, construction,
 revisions, counts, and checksums. [multi_turn_corrections.json](data/inputs/multi_turn_corrections.json)
-records the local BFCL correction. Each track evaluates its full target pool by
-default; `--sample` selects a reproducible subset. Both tracks use `--eval-split full`.
+records the local BFCL correction. Both tracks support `--eval-split full/dev/test`.
+The default `full` evaluates dev and test together. Use `dev` for validation and
+parameter selection, then explicitly run `test` with the selected parameters.
+The flag selects evaluation rows; it does not automatically select parameters
+or launch a second evaluation. Extraction pairs are shared across all splits.
+Existing commands that omit `--eval-split` keep the original full evaluation
+items, order, sampling, cache fingerprints, and output paths. Split metadata is
+only required when explicitly selecting `dev` or `test`.
+
+| Track | Target | Extraction pairs | Dev | Test | Full evaluation |
+|---|---|---:|---:|---:|---:|
+| Single-turn | call | 2,700 | 607 | 619 | 1,226 |
+| Single-turn | clarify | 2,700 | 436 | 437 | 873 |
+| Single-turn | abstain | 2,700 | 506 | 504 | 1,010 |
+| Multi-turn | call | Same call pairs | 100 | 100 | 200 |
+| Multi-turn | clarify | Same clarify pairs | 100 | 100 | 200 |
+| Multi-turn | abstain | Same abstain pairs | 100 | 100 | 200 |
+
+Single-turn selection uses the existing `split` field, which groups related
+When2Call items by `lineage`. Multi-turn selection uses
+[`multi_turn_split.json`](data/inputs/multi_turn_split.json): all category
+variants of a BFCL scenario stay together, as do scenarios with identical
+whitespace-normalized initial user requests. Seed `20261022` produces 300 dev
+and 300 test conversations, each balanced across the three targets. Rebuild
+the index with `python tool-use/scripts/make_multi_turn_split.py` from the
+repository root. Original conversation rows are unchanged.
+
+Add `--eval-split dev` or `--eval-split test` after the `--` separator in either
+track's commands below. `--sample` and `--limit` apply within the selected split.
+Splits have separate run directories and reuse compatible training artifacts.
+
+Run the data-only split checks without model or GPU dependencies:
+
+```bash
+python -m unittest discover -s tool-use/tests -v
+```
 
 ## Setup
 

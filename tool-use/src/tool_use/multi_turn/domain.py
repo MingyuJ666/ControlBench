@@ -20,7 +20,7 @@ from . import judging
 from .scoring import merge
 from ..prompting import prompted_items                                # noqa: F401  domain hook
 from ..render import conversation, render_chat
-from ..schema import EVAL_SPLIT, INPUTS, TARGETS                    # noqa: F401
+from ..schema import EVAL_SPLIT, EVAL_SPLITS, INPUTS, TARGETS        # noqa: F401
 
 NAME = "tool_use_multi_turn"
 
@@ -39,9 +39,8 @@ def render(tokenizer, item: dict) -> str:
 
 
 def items(target: str, split: str = EVAL_SPLIT) -> list[dict]:
-    """Every conversation of this target. `split` is accepted and ignored:
-    each configuration is evaluated on all of them and reported on its own."""
-    return eval_items(target)
+    """Conversations of this target in the full pool or its fixed dev/test split."""
+    return eval_items(target, split)
 
 
 # ---- scoring ----

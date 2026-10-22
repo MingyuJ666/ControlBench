@@ -1,15 +1,12 @@
 """The single-turn evaluation set.
 
-inputs/eval.jsonl holds 3,109 items. One set: every configuration is evaluated
-on all of it and reported on its own, so nothing is held out and the three
-targets need not be equal in size. Each is measured separately, and its count
-decides only the width of its own interval.
+inputs/eval.jsonl holds 3,109 items, with 1,549 original dev items and 1,560
+original test items. Full evaluation remains the default; selecting dev/test
+uses the recorded lineage-level partition without changing file order.
 
     item_id            When2Call's uuid, prefixed w2c_
     target             the action the situation calls for
-    split              which side of the original 50/50 division it fell on,
-                       recorded so an experiment that wants to select on one
-                       half can, and not used here
+    split              dev or test in the original lineage-level 50/50 division
     lineage            the upstream scenario; the division was drawn over these
     tools, messages    the tool list and the conversation, ending on the user
     gold               tool_names, and where one could be built, followup
@@ -24,7 +21,7 @@ one (873 clarify, 1,010 abstain), played by the domain's next_turn hook.
 
 import json
 
-from ..schema import INPUTS, TARGETS
+from ..schema import EVAL_SPLIT, EVAL_SPLITS, INPUTS, TARGETS
 
 EVAL = INPUTS / "eval.jsonl"
 
@@ -52,11 +49,22 @@ def load_items() -> list[dict]:
     return rows
 
 
-def eval_items(target: str) -> list[dict]:
-    """The evaluation items of one target, in item_id order."""
+def eval_items(target: str, split: str = EVAL_SPLIT) -> list[dict]:
+    """The selected evaluation items of one target, in original file order."""
     if target not in TARGETS:
         raise ValueError(f"target must be one of {TARGETS}, got {target!r}")
-    return [row for row in load_items() if row["target"] == target]
+    if split not in EVAL_SPLITS:
+        raise ValueError(f"choose an evaluation split from {EVAL_SPLITS}, got {split!r}")
+    rows = load_items()
+    if split == "full":
+        return [row for row in rows if row["target"] == target]
+    lineage_splits = {}
+    for row in rows:
+        if row.get("split") not in ("dev", "test"):
+            raise ValueError(f"{row['item_id']}: split must be dev or test")
+        if lineage_splits.setdefault(row["lineage"], row["split"]) != row["split"]:
+            raise ValueError(f"{row['item_id']}: lineage appears in both dev and test")
+    return [row for row in rows if row["target"] == target and row["split"] == split]
 
 
 def main() -> None:

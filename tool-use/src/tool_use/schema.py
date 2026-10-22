@@ -17,5 +17,6 @@ INPUTS = input_root(NAME)
 ACTIONS = ("call", "clarify", "abstain", "direct")
 TARGETS = ACTIONS[:3]
 
-#: One evaluation set, nothing held out. The shared layer asks for it by name.
+#: Full evaluation remains the default; dev/test select fixed held-out partitions.
 EVAL_SPLIT = "full"
+EVAL_SPLITS = ("full", "dev", "test")
