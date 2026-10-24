@@ -6,7 +6,6 @@ __pycache__/
 .pytest_cache/
 
 # Generated experiment inputs and outputs (intentionally not versioned here)
-data/l2s/
 runs/
 results/
 .cache/

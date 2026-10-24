@@ -1,6 +1,6 @@
 # Long-to-Short Reasoning Steering
 
-This directory contains the implementation of the long-to-short (L2S) reasoning-steering experiment. It is deliberately source-only: the completed run's frozen pairs, generated answers, fitted artifacts, reports, caches, virtual environments, and Slurm logs are **not** included.
+This directory contains the implementation of the long-to-short (L2S) reasoning-steering experiment. It includes the frozen 64-pair extraction set in `data/l2s/extraction.jsonl`; generated answers, fitted artifacts, reports, caches, virtual environments, and Slurm logs are **not** included.
 
 The experiment asks whether activations learned from matched long and short mathematical derivations can make a model produce shorter reasoning without losing answer accuracy. Pair construction and GPU inference are separate stages.
 
@@ -21,7 +21,7 @@ src/
   requirements-*.txt   # Separate CPU and GPU environments
 ```
 
-`data/l2s/`, `runs/`, and `results/` are intentionally ignored by Git. They contain generated inputs or outputs, not the code handoff.
+`runs/` and `results/` are intentionally ignored by Git. They contain generated outputs, not the code handoff.
 
 ## Experiment flow
 
@@ -33,13 +33,13 @@ The non-ITI and ITI tracks use separate output roots so that they can be run and
 
 ## Data policy
 
-The original completed run's pair artifact is not copied here. To run Stage B, either regenerate pairs with Stage A or obtain an authorized frozen-pair directory and pass it explicitly:
+The frozen pairs used by the experiment are in `data/l2s/extraction.jsonl` (exactly 64 distinct pairs). Stage B reads this directory by default, so Stage A is only needed to regenerate pairs; with this file present, `craft_pairs` reports the stage as complete without making teacher calls.
+
+To use a different pair directory, pass it explicitly; it must contain `extraction.jsonl` with exactly 64 distinct pairs:
 
 ```bash
 bash src/inference_non_iti.sh plan --pairs /absolute/path/to/l2s
 ```
-
-A usable pair directory must contain `extraction.jsonl` with exactly 64 distinct pairs. If Stage A is run without `--output`, it writes a new artifact to `data/l2s/` in this directory.
 
 ## Setup
 
@@ -73,8 +73,8 @@ Both stages load `~/.env`. It must define absolute Hugging Face cache paths (`HF
 Inspect a planned GPU workload without loading a model:
 
 ```bash
-L2S_GPU_PYTHON=python3 bash src/inference_non_iti.sh plan --pairs /absolute/path/to/l2s
-L2S_GPU_PYTHON=python3 bash src/inference_iti.sh plan --pairs /absolute/path/to/l2s
+L2S_GPU_PYTHON=python3 bash src/inference_non_iti.sh plan
+L2S_GPU_PYTHON=python3 bash src/inference_iti.sh plan
 ```
 
 The ordinary order for one model is `fit`, `baselines`, `grid`, `judge`, then `report`.
@@ -85,9 +85,9 @@ so choose separate roots for the two tracks and keep each root consistent across
 stages. Examples:
 
 ```bash
-bash src/inference_non_iti.sh fit --model Llama-3.1-8B --pairs /absolute/path/to/l2s
-bash src/inference_non_iti.sh baselines --model Llama-3.1-8B --pairs /absolute/path/to/l2s
-bash src/inference_non_iti.sh grid --model Llama-3.1-8B --pairs /absolute/path/to/l2s
+bash src/inference_non_iti.sh fit --model Llama-3.1-8B
+bash src/inference_non_iti.sh baselines --model Llama-3.1-8B
+bash src/inference_non_iti.sh grid --model Llama-3.1-8B
 bash src/inference_non_iti.sh judge
 bash src/inference_non_iti.sh report
 ```
